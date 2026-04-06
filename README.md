@@ -39,8 +39,8 @@ Os dados utilizados são provenientes exclusivamente de fontes oficiais do Gover
 
 | Fonte | Descrição | Link |
 |---|---|---|
-| **SSP-SP** | Boletins de Ocorrência de celulares subtraídos (furtos e roubos) | [ssp.sp.gov.br/estatistica/dados-mensais](https://www.ssp.sp.gov.br/estatistica/dados-mensais) |
-| **SSP-SP — Transparência** | Portal de dados abertos de segurança pública | [transparencia.ssp.sp.gov.br](https://www.transparencia.ssp.sp.gov.br/) |
+| **SSP-SP** | Consulta de Boletins de Ocorrência de celulares subtraídos (furtos e roubos) | [ssp.sp.gov.br/estatistica/dados-mensais](https://www.ssp.sp.gov.br/estatistica/consultas) |
+| **SSP-SP — Transparência** | Portal de dados abertos de segurança pública | [transparencia.ssp.sp.gov.br](https://www.ssp.sp.gov.br/) |
 
 > Os dados são de domínio público e utilizados exclusivamente para fins analíticos e educacionais, sem qualquer fins comerciais.
 
