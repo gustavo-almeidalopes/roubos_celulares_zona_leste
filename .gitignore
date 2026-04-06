@@ -1,0 +1,24 @@
+# ── Raw data (never commit the giant CSV) ────────────────────────────────────
+src/data/raw/
+
+# ── DuckDB database file (local only — regenerate with clean_ingest.py) ──────
+src/data/processed/*.duckdb
+
+# ── Parquet IS committed (needed for Streamlit Cloud deployment) ─────────────
+# src/data/processed/cleaned_data.parquet   ← keep in git
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.env
+
+# ── OS / editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

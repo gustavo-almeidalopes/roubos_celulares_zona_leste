@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  SP Public Safety Dashboard — Python dependencies
+#
+#  Install:  pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Dashboard
+streamlit>=1.35.0
+
+# Data pipeline (clean_ingest.py)
+pandas>=2.1.0
+pyarrow>=14.0.0          # Arrow engine — used by DuckDB COPY … TO parquet
+
+# Analytical query engine (app.py reads the Parquet via DuckDB VIEW)
+duckdb>=0.10.0
+
+# Charts
+plotly>=5.20.0
