@@ -29,7 +29,7 @@ A stack foi projetada para escalar **sem servidor e sem banco de dados externo**
 | Recurso | Link |
 |---|---|
 | 🚀 **App ao vivo (Streamlit Cloud)** | https://rouboscelulareszonaleste-cpqy3z3r56vvkkpbhjfvhn.streamlit.app/ |
-| 🐙 **Repositório GitHub** | *(adicione o link do seu repo aqui)* |
+| 🐙 **Repositório GitHub** | https://github.com/gustavo-almeidalopes/roubos_celulares_zona_leste |
 
 ---
 
