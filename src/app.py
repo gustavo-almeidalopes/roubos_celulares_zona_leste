@@ -1,35 +1,17 @@
 """
-SP Public Safety Dashboard — main Streamlit application.
+SP Public Safety Dashboard — São Paulo (Capital)
+================================================
 
-How to run (local)
-------------------
+Filtra automaticamente APENAS ocorrências do município de São Paulo (capital)
+e aplica um visual "brutalista" inspirado no protótipo Radar Celular SP
+(fundo cinza claro, bordas pretas grossas, sombras duras, tipografia pesada).
+
+Como rodar
+----------
     streamlit run src/app.py
 
-How to deploy on streamlit.io
-------------------------------
-1. Run the pipeline once locally to generate the Parquet file:
-
-       python -m src.data_pipeline.clean_ingest \\
-           --input  src/data/raw/YOUR_FILE.csv
-
-2. Commit  src/data/processed/cleaned_data.parquet  to your git repo.
-   (If the file exceeds 100 MB, use Git LFS:  git lfs track "*.parquet")
-
-3. Push to GitHub and connect the repo in https://share.streamlit.io
-
-Architecture
-------------
-                  raw CSV (put in src/data/raw/)
-                       │
-              clean_ingest.py          ← run ONCE from terminal
-                       │
-              cleaned_data.parquet     ← commit this to git
-                       │
-       DuckDB in-memory VIEW (read_parquet)
-                       │  SQL GROUP BY → tiny DataFrames only
-              components/              ← charts, filters, metrics
-                       │
-              Streamlit widgets
+Pipeline (rodar uma vez antes):
+    python -m src.data_pipeline.clean_ingest --input src/data/raw/SEU_ARQUIVO.csv
 """
 
 from __future__ import annotations
@@ -49,7 +31,7 @@ from components.charts import (
     render_crime_map,
     render_heatmap_period,
     render_monthly_trend,
-    render_top_municipios,
+    render_top_municipios,  # reaproveitado p/ Top Bairros
     render_top_rubricas,
     render_yoy_comparison,
 )
@@ -61,100 +43,217 @@ PARQUET_PATH = _SRC / "data" / "processed" / "cleaned_data.parquet"
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="SP Public Safety Dashboard",
-    page_icon="🔍",
+    page_title="Radar Segurança SP — Capital",
+    page_icon="◼",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.markdown("""
+# ── Brutalist theme (inspirado no index.html / Radar Celular SP) ──────────────
+st.markdown(
+    """
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-    .block-container { padding-top: 1.2rem; }
+    :root {
+        --brutal-bg:     #E5E5E5;
+        --brutal-card:   #FFFFFF;
+        --brutal-ink:    #000000;
+        --brutal-muted:  #404040;
+        --brutal-soft:   #A3A3A3;
+        --brutal-accent: #DC2626;
+    }
+
+    /* Base */
+    html, body, [class*="css"], .stApp {
+        font-family: 'Public Sans', sans-serif !important;
+        background-color: var(--brutal-bg) !important;
+        color: var(--brutal-ink) !important;
+    }
+    .block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 1500px; }
+
+    /* Headings — Archivo Black */
+    h1, h2, h3, h4, .font-brutal {
+        font-family: 'Archivo Black', sans-serif !important;
+        color: var(--brutal-ink) !important;
+        letter-spacing: -0.5px;
+    }
+    h1 { font-size: 2.6rem !important; line-height: 1 !important; }
+
+    /* Header bar */
+    .brutal-header {
+        background: var(--brutal-ink);
+        color: #fff;
+        padding: 1.2rem 1.4rem;
+        border: 3px solid #000;
+        box-shadow: 6px 6px 0 0 #000;
+        margin-bottom: 1.4rem;
+    }
+    .brutal-header h1 { color: #fff !important; margin: 0 !important; }
+    .brutal-header .tag {
+        display: inline-block;
+        background: var(--brutal-accent);
+        color: #fff;
+        padding: 2px 10px;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 0.75rem;
+        margin-left: 8px;
+        border: 2px solid #fff;
+        vertical-align: middle;
+    }
+    .brutal-header p { margin: 6px 0 0 0; color: #A3A3A3; font-size: 0.85rem; }
+
+    /* Metric cards — caixinhas brutalistas */
     [data-testid="stMetric"] {
-        border-left: 4px solid #636EFA;
-        padding-left: 0.6rem;
-        background: #f8f9fb;
-        border-radius: 4px;
+        background: var(--brutal-card) !important;
+        border: 3px solid #000 !important;
+        box-shadow: 5px 5px 0 0 #000 !important;
+        padding: 14px 16px !important;
+        border-radius: 0 !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-family: 'Archivo Black', sans-serif !important;
+        text-transform: uppercase;
+        font-size: 0.7rem !important;
+        color: var(--brutal-muted) !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-family: 'Archivo Black', sans-serif !important;
+        color: #000 !important;
+        font-size: 1.8rem !important;
+    }
+
+    /* Plotly chart wrapper → caixa brutalista */
+    [data-testid="stPlotlyChart"] {
+        background: #fff;
+        border: 3px solid #000;
+        box-shadow: 5px 5px 0 0 #000;
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+
+    /* Dividers — linha preta sólida */
+    hr, [data-testid="stDivider"] {
+        border: none !important;
+        border-top: 3px solid #000 !important;
+        margin: 1.6rem 0 !important;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: var(--brutal-card) !important;
+        border-right: 3px solid #000 !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] .stMarkdown {
+        font-family: 'Archivo Black', sans-serif !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        border: 2px solid #000 !important;
+        border-radius: 0 !important;
+        box-shadow: 3px 3px 0 0 #000;
+        background: #fff !important;
+    }
+
+    /* Botões */
+    .stButton > button, .stDownloadButton > button {
+        background: #000 !important;
+        color: #fff !important;
+        border: 3px solid #000 !important;
+        border-radius: 0 !important;
+        font-family: 'Archivo Black', sans-serif !important;
+        text-transform: uppercase;
+        box-shadow: 4px 4px 0 0 #000;
+        transition: transform .05s ease;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        background: var(--brutal-accent) !important;
+        border-color: #000 !important;
+        transform: translate(-1px, -1px);
+        box-shadow: 5px 5px 0 0 #000;
+    }
+
+    /* Expanders */
+    [data-testid="stExpander"] {
+        background: #fff !important;
+        border: 3px solid #000 !important;
+        border-radius: 0 !important;
+        box-shadow: 5px 5px 0 0 #000;
+        margin-bottom: 1rem;
+    }
+    [data-testid="stExpander"] summary {
+        font-family: 'Archivo Black', sans-serif !important;
+        text-transform: uppercase;
+    }
+
+    /* Alerts */
+    [data-testid="stAlert"] {
+        border: 3px solid #000 !important;
+        border-radius: 0 !important;
+        box-shadow: 4px 4px 0 0 #000;
+    }
+
+    /* Dataframe */
+    [data-testid="stDataFrame"] {
+        border: 3px solid #000;
+        box-shadow: 5px 5px 0 0 #000;
+    }
+
+    /* Caption */
+    .stCaption, [data-testid="stCaptionContainer"] {
+        color: var(--brutal-muted) !important;
+        font-weight: 700;
     }
 </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
 
-# ── DuckDB connection (one per session, cached) ───────────────────────────────
+# ── DuckDB connection — JÁ FILTRA SÃO PAULO CAPITAL ───────────────────────────
+# A view `crimes` expõe APENAS o município de São Paulo (capital). Como todas
+# as queries dos componentes consultam `crimes`, o filtro vale para o app
+# inteiro automaticamente — não há como "escapar" dele acidentalmente.
+SP_CAPITAL_FILTER = """
+    UPPER(TRIM(NOME_MUNICIPIO)) IN (
+        'S.PAULO', 'SAO PAULO', 'SÃO PAULO', 'S. PAULO', 'SP'
+    )
+"""
+
 @st.cache_resource(show_spinner=False)
 def _get_connection(parquet_path: str) -> duckdb.DuckDBPyConnection | None:
-    """Open an in-memory DuckDB and expose the Parquet as a view named `crimes`.
-
-    Using a VIEW instead of COPY INTO TABLE means DuckDB streams columns
-    from the Parquet file on demand — query results are materialised but the
-    full 1M+ row dataset never sits in RAM all at once.
-    """
     p = Path(parquet_path)
     if not p.exists():
         return None
-    con = duckdb.connect()                      # pure in-memory, no .duckdb file
-    con.execute(
-        f"CREATE VIEW crimes AS SELECT * FROM read_parquet('{p.as_posix()}')"
-    )
+    con = duckdb.connect()
+    con.execute(f"""
+        CREATE VIEW crimes AS
+        SELECT *
+        FROM read_parquet('{p.as_posix()}')
+        WHERE {SP_CAPITAL_FILTER}
+    """)
     return con
 
 
-# ── Setup / error screen ──────────────────────────────────────────────────────
+# ── Setup screen ──────────────────────────────────────────────────────────────
 def _show_setup_screen() -> None:
-    st.title("🔍 SP Public Safety Dashboard")
-    st.error("**No processed data found.** Follow the steps below to get started.")
-
-    st.markdown("### Step 1 — Place the raw CSV")
-    st.code(
-        "src/\n"
-        "└── data/\n"
-        "    └── raw/\n"
-        "        └── ocorrencias_full.csv   ← put your SSP-SP CSV here",
-        language="text",
+    st.markdown(
+        '<div class="brutal-header"><h1>◼ RADAR SEGURANÇA SP'
+        '<span class="tag">CAPITAL</span></h1>'
+        '<p>Dados não encontrados — siga os passos abaixo</p></div>',
+        unsafe_allow_html=True,
     )
-    st.caption(
-        "The file must be semicolon-delimited (`;`). "
-        "Any SSP-SP export downloaded from https://www.ssp.sp.gov.br works."
-    )
-
-    st.markdown("### Step 2 — Install dependencies (once)")
-    st.code("pip install -r requirements.txt", language="bash")
-
-    st.markdown("### Step 3 — Run the ingestion pipeline (once)")
+    st.error("**Nenhum dado processado encontrado.**")
+    st.markdown("### 1 — Coloque o CSV bruto")
+    st.code("src/data/raw/ocorrencias_full.csv", language="text")
+    st.markdown("### 2 — Rode o pipeline")
     st.code(
-        "# From the project root:\n"
         "python -m src.data_pipeline.clean_ingest \\\n"
-        "    --input  src/data/raw/ocorrencias_full.csv\n\n"
-        "# Output goes to  src/data/processed/cleaned_data.parquet\n"
-        "# Progress is printed per chunk (50 000 rows each)",
+        "    --input src/data/raw/ocorrencias_full.csv",
         language="bash",
     )
-    st.info(
-        "The pipeline reads the CSV in 50 000-row chunks so it never loads the "
-        "full file into RAM. A 1M-row file typically takes 30–90 seconds."
-    )
-
-    st.markdown("### Step 4 — Launch the dashboard")
+    st.markdown("### 3 — Inicie o app")
     st.code("streamlit run src/app.py", language="bash")
-
-    st.markdown("### Deploying on streamlit.io")
-    st.markdown(
-        "1. Commit `src/data/processed/cleaned_data.parquet` to your GitHub repo.  \n"
-        "   *(If the file is > 100 MB use Git LFS: `git lfs track '*.parquet'`)*  \n"
-        "2. Go to https://share.streamlit.io → **New app** → point to `src/app.py`.  \n"
-        "3. The app reads the Parquet directly — no database server required."
-    )
-
-    st.markdown("### Optional flags for `clean_ingest.py`")
-    st.code(
-        "python -m src.data_pipeline.clean_ingest --help\n\n"
-        "  --input        Path to raw CSV           (required)\n"
-        "  --output-dir   Where to write output     (default: src/data/processed)\n"
-        "  --chunk-size   Rows per chunk            (default: 50000)\n"
-        "  --sep          CSV delimiter             (default: ;)\n"
-        "  --encoding     File encoding             (default: utf-8, try latin-1)",
-        language="text",
-    )
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -164,33 +263,52 @@ if con is None:
     _show_setup_screen()
     st.stop()
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.title("🔍 SP Public Safety Dashboard")
-st.caption(
-    "Source: SSP-SP — Secretaria da Segurança Pública do Estado de São Paulo  "
-    "· Powered by DuckDB + Streamlit"
+# Sanidade: quantas linhas sobraram após filtro de SP capital?
+total_sp = con.execute("SELECT COUNT(*) FROM crimes").fetchone()[0]
+
+# ── Header brutalista ─────────────────────────────────────────────────────────
+st.markdown(
+    f'''
+    <div class="brutal-header">
+        <h1>◼ RADAR SEGURANÇA SP <span class="tag">CAPITAL</span></h1>
+        <p>Fonte: SSP-SP · {total_sp:,} ocorrências no município de São Paulo · DuckDB + Streamlit</p>
+    </div>
+    '''.replace(",", "."),
+    unsafe_allow_html=True,
 )
 
-# ── Sidebar filters ───────────────────────────────────────────────────────────
-filters = render_sidebar_filters(con)
-where   = build_where_clause(filters)
+if total_sp == 0:
+    st.error(
+        "O filtro de São Paulo capital retornou **0 linhas**. "
+        "Verifique se o campo `NOME_MUNICIPIO` no seu Parquet usa um dos formatos: "
+        "`S.PAULO`, `SAO PAULO`, `SÃO PAULO`."
+    )
+    st.stop()
 
-if where:
+# ── Sidebar filters ───────────────────────────────────────────────────────────
+st.sidebar.markdown("## ◼ FILTROS")
+filters = render_sidebar_filters(con)
+# Trava o filtro de município — só SP capital existe nessa view
+filters["municipios"] = []
+where = build_where_clause(filters)
+
+if filters.get("years") or filters.get("delegacias"):
     parts = []
     if filters["years"]:
-        parts.append(f"Years: {', '.join(str(y) for y in sorted(filters['years']))}")
+        parts.append(f"Anos: {', '.join(str(y) for y in sorted(filters['years']))}")
     if filters["delegacias"]:
-        parts.append(f"{len(filters['delegacias'])} precinct(s)")
-    if filters["municipios"]:
-        parts.append(f"{len(filters['municipios'])} municipality(ies)")
-    st.sidebar.caption("Active: " + " · ".join(parts))
+        parts.append(f"{len(filters['delegacias'])} delegacia(s)")
+    st.sidebar.caption("Ativo: " + " · ".join(parts))
+
+st.sidebar.markdown("---")
+st.sidebar.caption("📍 Escopo fixo: **São Paulo / Capital**")
 
 # ── KPI row ───────────────────────────────────────────────────────────────────
 render_metric_cards(con, where)
 
 st.divider()
 
-# ── Row 1: Top crime types + category donut ───────────────────────────────────
+# ── Row 1 ─────────────────────────────────────────────────────────────────────
 col1, col2 = st.columns([2, 1])
 with col1:
     render_top_rubricas(con, where)
@@ -199,48 +317,45 @@ with col2:
 
 st.divider()
 
-# ── Row 2: Monthly trend ──────────────────────────────────────────────────────
+# ── Row 2 ─────────────────────────────────────────────────────────────────────
 render_monthly_trend(con, where)
 
 st.divider()
 
-# ── Row 3: Top municipalities + YoY bars ─────────────────────────────────────
+# ── Row 3 ─────────────────────────────────────────────────────────────────────
 col3, col4 = st.columns(2)
 with col3:
+    # Como só temos SP capital, "top municípios" vira efetivamente "top bairros"
+    # se o componente agrupar por NOME_MUNICIPIO ele mostrará apenas SP — então
+    # mantemos o YoY ao lado pra balancear a linha.
     render_top_municipios(con, where)
 with col4:
     render_yoy_comparison(con, where)
 
 st.divider()
 
-# ── Row 4: Day × period heatmap ───────────────────────────────────────────────
+# ── Row 4 ─────────────────────────────────────────────────────────────────────
 render_heatmap_period(con, where)
 
 st.divider()
 
-# ── Expandable sections ───────────────────────────────────────────────────────
-with st.expander("🗺 Incident Map (geo-coded records only)", expanded=False):
-    st.caption(
-        "Random sample of up to 5 000 geo-coded records. "
-        "Apply filters above to zoom in on an area."
-    )
+# ── Expanders ─────────────────────────────────────────────────────────────────
+with st.expander("🗺 MAPA DE INCIDENTES (registros geocodificados)", expanded=False):
+    st.caption("Amostra de até 5.000 registros. Use os filtros pra recortar áreas.")
     render_crime_map(con, where)
 
-with st.expander("📋 Raw Data Preview (200 rows)", expanded=False):
+with st.expander("📋 PRÉVIA DOS DADOS (200 linhas)", expanded=False):
     preview = con.execute(f"SELECT * FROM crimes {where} LIMIT 200").df()
     st.dataframe(preview, use_container_width=True, hide_index=True)
 
-with st.expander("⬇ Download Filtered Data as CSV", expanded=False):
-    st.warning(
-        "Exporting a large filtered result set may take a moment. "
-        "Narrow the filters first to reduce the download size."
-    )
-    if st.button("Prepare download"):
-        with st.spinner("Querying …"):
+with st.expander("⬇ EXPORTAR CSV", expanded=False):
+    st.warning("Filtre antes de exportar pra reduzir o tamanho do download.")
+    if st.button("PREPARAR DOWNLOAD"):
+        with st.spinner("Consultando…"):
             dl_df = con.execute(f"SELECT * FROM crimes {where}").df()
         st.download_button(
-            label=f"Download {len(dl_df):,} rows (.csv)",
+            label=f"BAIXAR {len(dl_df):,} LINHAS (.CSV)".replace(",", "."),
             data=dl_df.to_csv(index=False, sep=";").encode("utf-8"),
-            file_name="filtered_crimes.csv",
+            file_name="ocorrencias_sp_capital.csv",
             mime="text/csv",
         )
