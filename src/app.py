@@ -214,7 +214,7 @@ st.markdown(
 # A view `crimes` expõe APENAS o município de São Paulo (capital). Como todas
 # as queries dos componentes consultam `crimes`, o filtro vale para o app
 # inteiro automaticamente — não há como "escapar" dele acidentalmente.
-SP_CAPITAL_FILTER = """
+SP_CAPITAL_FILTER = """ //Ver para por todos os bairros da zona leste de Sp
     UPPER(TRIM(NOME_MUNICIPIO)) IN (
         'S.PAULO', 'SAO PAULO', 'SÃO PAULO', 'S. PAULO', 'SP'
     )
