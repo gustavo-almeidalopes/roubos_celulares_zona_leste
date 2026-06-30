@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radar Segurança SP — Inteligência de roubos e furtos de celulares</title>
+  <meta name="description" content="Dashboard analítico de subtração de celulares na cidade de São Paulo, com dados oficiais da SSP-SP. Minimalista, monocromático, atualizado por pipeline automatizado." />
+  <meta property="og:title" content="Radar Segurança SP" />
+  <meta property="og:description" content="Inteligência de roubos e furtos de celulares em São Paulo — dados SSP-SP." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #FAFAFA;
+      --surface: #FFFFFF;
+      --ink: #0A0A0A;
+      --text: #1A1A1A;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --border-strong: #D1D5DB;
+      --hover: #F3F4F6;
+      --radius: 14px;
+      --maxw: 1080px;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: 'Public Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: saturate(180%) blur(6px);
+    }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+    .brand .mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--ink);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 14px;
+    }
+    .nav .links { display: flex; gap: 18px; align-items: center; }
+    .nav .links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .nav .links a:hover { color: var(--ink); }
+    @media (max-width: 640px) { .nav .links a.hide-sm { display: none; } }
+
+    /* Hero */
+    .hero { padding: 76px 0 56px; }
+    .badge {
+      display: inline-block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+      font-weight: 700; color: var(--muted);
+      border: 1px solid var(--border-strong); border-radius: 999px; padding: 5px 12px; margin-bottom: 22px;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; letter-spacing: -0.02em;
+      margin: 0 0 18px; color: var(--ink); font-weight: 700;
+    }
+    .lead { font-size: clamp(1rem, 2.2vw, 1.2rem); color: var(--muted); max-width: 640px; margin: 0 0 30px; }
+    .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+      font-weight: 600; font-size: 15px; padding: 12px 20px; border-radius: 10px;
+      border: 1px solid var(--ink); transition: background .15s ease, color .15s ease, transform .05s ease;
+    }
+    .btn-primary { background: var(--ink); color: #fff; }
+    .btn-primary:hover { background: #262626; }
+    .btn-ghost { background: transparent; color: var(--ink); border-color: var(--border-strong); }
+    .btn-ghost:hover { background: var(--hover); }
+    .btn:active { transform: translateY(1px); }
+
+    /* Stats strip */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 8px 0 64px; }
+    .stat {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .stat .k { font-size: 1.5rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+    .stat .l { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; margin-top: 4px; }
+    @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+    /* Features */
+    section.features { padding-bottom: 64px; }
+    .section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; margin: 0 0 18px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .card .ico {
+      width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--border-strong);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 18px;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--ink); }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+    /* Pipeline */
+    .pipe { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+    .pipe .step {
+      background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px;
+      padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
+    }
+    .pipe .arrow { color: var(--muted); font-weight: 700; }
+
+    /* CTA band */
+    .band {
+      background: var(--ink); color: #fff; border-radius: 18px; padding: 44px 32px; margin: 8px 0 64px;
+      text-align: center;
+    }
+    .band h2 { margin: 0 0 10px; font-size: clamp(1.4rem, 3vw, 2rem); letter-spacing: -0.01em; }
+    .band p { margin: 0 0 22px; color: #C9C9C9; }
+    .band .btn-primary { background: #fff; color: var(--ink); border-color: #fff; }
+    .band .btn-primary:hover { background: #E5E7EB; }
+
+    footer { border-top: 1px solid var(--border); background: var(--surface); }
+    .foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: space-between; padding: 24px 0; font-size: 13px; color: var(--muted); }
+    .foot a { color: var(--muted); text-decoration: none; }
+    .foot a:hover { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="brand"><span class="mark">◼</span> Radar Segurança SP</div>
+      <nav class="links">
+        <a class="hide-sm" href="#recursos">Recursos</a>
+        <a class="hide-sm" href="#pipeline">Dados</a>
+        <a href="https://github.com/gustavo-almeidalopes/roubos_celulares_zona_leste" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="wrap hero">
+      <span class="badge">São Paulo · Capital</span>
+      <h1>Inteligência de roubos e furtos de celulares em São Paulo</h1>
+      <p class="lead">
+        Um dashboard analítico minimalista que transforma os dados públicos da SSP-SP em
+        visualizações claras — tendências, mapa de incidentes, ranking por bairro e
+        comparativos ano a ano. Atualizado por um pipeline automatizado.
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://rouboscelulareszonaleste-cpqy3z3r56vvkkpbhjfvhn.streamlit.app/" target="_blank" rel="noopener">
+          Abrir dashboard →
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/gustavo-almeidalopes/roubos_celulares_zona_leste" target="_blank" rel="noopener">
+          Ver código
+        </a>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="stats">
+        <div class="stat"><div class="k">SSP-SP</div><div class="l">Fonte oficial</div></div>
+        <div class="stat"><div class="k">7</div><div class="l">Visualizações</div></div>
+        <div class="stat"><div class="k">8</div><div class="l">Filtros</div></div>
+        <div class="stat"><div class="k">Auto</div><div class="l">Atualização</div></div>
+      </div>
+    </section>
+
+    <section class="wrap features" id="recursos">
+      <p class="section-title">O que o dashboard mostra</p>
+      <div class="grid">
+        <div class="card">
+          <div class="ico">▦</div>
+          <h3>Cards de métricas</h3>
+          <p>Total de ocorrências, furtos, roubos, pico mensal e % geocodificado — com variação ano a ano.</p>
+        </div>
+        <div class="card">
+          <div class="ico">◔</div>
+          <h3>Tendências no tempo</h3>
+          <p>Evolução mensal por ano e comparativo Furtos × Roubos, em escala preto & branco legível.</p>
+        </div>
+        <div class="card">
+          <div class="ico">◉</div>
+          <h3>Mapa de incidentes</h3>
+          <p>Amostra georreferenciada dos boletins na cidade de São Paulo, com filtro por área.</p>
+        </div>
+        <div class="card">
+          <div class="ico">▤</div>
+          <h3>Ranking por bairro</h3>
+          <p>Top bairros e tipos de crime mais frequentes, ordenados por volume.</p>
+        </div>
+        <div class="card">
+          <div class="ico">⌗</div>
+          <h3>Heatmap dia × período</h3>
+          <p>Concentração de ocorrências por dia da semana cruzado com período do dia.</p>
+        </div>
+        <div class="card">
+          <div class="ico">⤓</div>
+          <h3>Exploração e export</h3>
+          <p>Prévia dos dados filtrados e download do recorte em CSV para análise própria.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap" id="pipeline">
+      <p class="section-title">Pipeline de dados automatizado</p>
+      <div class="pipe">
+        <span class="step">SSP-SP (XLS/XLSX)</span>
+        <span class="arrow">→</span>
+        <span class="step">Download</span>
+        <span class="arrow">→</span>
+        <span class="step">Excel → CSV</span>
+        <span class="arrow">→</span>
+        <span class="step">Limpeza</span>
+        <span class="arrow">→</span>
+        <span class="step">Validação</span>
+        <span class="arrow">→</span>
+        <span class="step">Parquet</span>
+        <span class="arrow">→</span>
+        <span class="step">Dashboard</span>
+      </div>
+      <p class="lead" style="margin-top:18px">
+        Fontes configuradas pelo README, executadas de forma agendada via GitHub Actions —
+        novos dados entram sem intervenção manual.
+      </p>
+    </section>
+
+    <section class="wrap">
+      <div class="band">
+        <h2>Explore os dados de segurança de São Paulo</h2>
+        <p>Dados públicos, transformados em informação acionável.</p>
+        <a class="btn btn-primary" href="https://rouboscelulareszonaleste-cpqy3z3r56vvkkpbhjfvhn.streamlit.app/" target="_blank" rel="noopener">
+          Abrir dashboard →
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span>Dados públicos da SSP-SP · uso analítico e educacional, sem fins comerciais.</span>
+      <span>
+        <a href="https://github.com/gustavo-almeidalopes/" target="_blank" rel="noopener">GitHub</a>
+        ·
+        <a href="https://www.linkedin.com/in/gustavorobertodealmeidalopes/" target="_blank" rel="noopener">LinkedIn</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

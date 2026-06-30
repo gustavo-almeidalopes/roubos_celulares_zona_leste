@@ -1,20 +1,18 @@
 """
-Plotly chart builders — versão "brutalista" para o Radar Segurança SP / Capital.
+Plotly chart builders — tema minimalista monocromático (Radar Segurança SP).
 
 Cada função roda UMA query DuckDB e devolve uma figura Plotly. Todas as queries
-pesadas são cacheadas por (where_clause), então mudar um filtro re-executa
-a query uma única vez. O parâmetro `_con` (underscore) opta por não-hashear
-a conexão DuckDB no cache do Streamlit.
+pesadas são cacheadas por (where_clause), então mudar um filtro re-executa a query
+uma única vez. O parâmetro `_con` (underscore) opta por não-hashear a conexão
+DuckDB no cache do Streamlit.
 
-Mudanças nesta versão
----------------------
-* Tema visual brutalista: paleta preto/branco/vermelho, fontes pesadas,
-  bordas sólidas, sem grids suaves nem sombras coloridas.
-* `render_top_municipios` foi reaproveitado como **Top Bairros** — como o
-  app já filtra apenas São Paulo capital, agrupar por município retornaria
-  uma única barra; agrupamos por BAIRRO.
-* Helper `_apply_brutal_layout` centraliza o estilo, evitando repetição.
-* Tooltips, eixos e títulos padronizados.
+Identidade visual
+-----------------
+* Escala **preto & branco** pura — sem cores de destaque.
+* Diferenciação de séries por **tom de cinza + traço/hachura** (não por cor),
+  garantindo legibilidade mesmo em impressão P&B ou para daltônicos.
+* Bordas hairline, gridlines sutis, tipografia Public Sans, sem sombras.
+* Helper `_apply_minimal_layout` centraliza o estilo, evitando repetição.
 """
 
 from __future__ import annotations
@@ -26,79 +24,76 @@ import plotly.graph_objects as go
 import streamlit as st
 
 
-# ── Paleta & helpers de estilo ────────────────────────────────────────────────
+# ── Paleta monocromática & helpers de estilo ──────────────────────────────────
 
-BRUTAL = {
-    "ink":     "#000000",
-    "paper":   "#FFFFFF",
-    "bg":      "#E5E5E5",
-    "muted":   "#404040",
-    "soft":    "#A3A3A3",
-    "accent":  "#DC2626",   # vermelho
-    "accent2": "#1F1F1F",
-    "accent3": "#737373",
+MONO = {
+    "ink":   "#0A0A0A",   # quase preto — texto, eixos, série principal
+    "paper": "#FFFFFF",
+    "bg":    "#FAFAFA",
+    "muted": "#6B7280",   # rótulos secundários
+    "soft":  "#9CA3AF",   # série secundária
+    "faint": "#D4D4D4",   # série terciária
+    "line":  "#E5E7EB",   # gridlines / bordas
 }
 
-# Sequência usada quando precisamos de várias cores discretas
-BRUTAL_SEQ = ["#000000", "#DC2626", "#404040", "#A3A3A3", "#737373", "#1F1F1F"]
+# Sequência de cinzas para múltiplas séries discretas (alto → baixo contraste).
+MONO_SEQ = ["#0A0A0A", "#737373", "#A3A3A3", "#404040", "#C4C4C4", "#525252", "#8A8A8A"]
 
-# Escala contínua mono-vermelho (do cinza claro ao vermelho forte)
-BRUTAL_SCALE_RED = [
-    [0.0, "#F5F5F5"],
-    [0.5, "#F87171"],
-    [1.0, "#7F1D1D"],
+# Escala contínua claro → preto (para barras coloridas por volume e heatmap).
+MONO_SCALE = [
+    [0.0, "#F3F4F6"],
+    [0.5, "#9CA3AF"],
+    [1.0, "#0A0A0A"],
 ]
 
-# Escala contínua mono-preto
-BRUTAL_SCALE_INK = [
-    [0.0, "#F5F5F5"],
-    [0.5, "#737373"],
-    [1.0, "#000000"],
-]
+# Traços para diferenciar linhas em P&B.
+_DASHES = ["solid", "dash", "dot", "dashdot", "longdash", "longdashdot"]
+
+# Config padrão do Plotly: responsivo e sem barra de ferramentas (limpo).
+_PLOTLY_CONFIG = {"displayModeBar": False, "responsive": True}
 
 
-def _apply_brutal_layout(fig: go.Figure, *, height: int = 420, title: str | None = None) -> go.Figure:
-    """Aplica o tema brutalista a uma figura Plotly já construída."""
+def _apply_minimal_layout(fig: go.Figure, *, height: int = 420, title: str | None = None) -> go.Figure:
+    """Aplica o tema minimalista monocromático a uma figura Plotly."""
     fig.update_layout(
         height=height,
-        paper_bgcolor=BRUTAL["paper"],
-        plot_bgcolor=BRUTAL["paper"],
-        font=dict(family="Public Sans, sans-serif", color=BRUTAL["ink"], size=13),
+        paper_bgcolor=MONO["paper"],
+        plot_bgcolor=MONO["paper"],
+        font=dict(family="Public Sans, sans-serif", color=MONO["ink"], size=13),
         title=dict(
-            text=f"<b>{title.upper()}</b>" if title else None,
-            font=dict(family="Archivo Black, sans-serif", size=16, color=BRUTAL["ink"]),
-            x=0.01, xanchor="left", y=0.97,
+            text=f"<b>{title}</b>" if title else None,
+            font=dict(family="Public Sans, sans-serif", size=15, color=MONO["ink"]),
+            x=0.01, xanchor="left", y=0.98,
         ),
-        margin=dict(l=14, r=14, t=56 if title else 14, b=40),
+        margin=dict(l=14, r=14, t=52 if title else 14, b=40),
         legend=dict(
-            font=dict(family="Public Sans", size=11, color=BRUTAL["ink"]),
-            bgcolor="rgba(255,255,255,0.9)",
-            bordercolor=BRUTAL["ink"],
-            borderwidth=2,
+            font=dict(family="Public Sans", size=11, color=MONO["ink"]),
+            bgcolor="rgba(255,255,255,0)",
+            borderwidth=0,
         ),
         hoverlabel=dict(
             bgcolor="#FFFFFF",
-            bordercolor="#000000",
-            font=dict(family="Public Sans", size=12, color="#000"),
+            bordercolor=MONO["line"],
+            font=dict(family="Public Sans", size=12, color=MONO["ink"]),
         ),
     )
-    fig.update_xaxes(
-        showline=True, linewidth=2, linecolor=BRUTAL["ink"], mirror=False,
-        gridcolor="#E5E5E5", zerolinecolor=BRUTAL["ink"], zerolinewidth=2,
-        ticks="outside", tickcolor=BRUTAL["ink"], ticklen=5,
-        tickfont=dict(family="Public Sans", size=11, color=BRUTAL["muted"]),
+    axis_common = dict(
+        showline=True, linewidth=1, linecolor=MONO["line"], mirror=False,
+        gridcolor=MONO["line"], zerolinecolor=MONO["line"], zerolinewidth=1,
+        ticks="outside", tickcolor=MONO["line"], ticklen=4,
+        tickfont=dict(family="Public Sans", size=11, color=MONO["muted"]),
     )
-    fig.update_yaxes(
-        showline=True, linewidth=2, linecolor=BRUTAL["ink"], mirror=False,
-        gridcolor="#E5E5E5", zerolinecolor=BRUTAL["ink"], zerolinewidth=2,
-        ticks="outside", tickcolor=BRUTAL["ink"], ticklen=5,
-        tickfont=dict(family="Public Sans", size=11, color=BRUTAL["muted"]),
-    )
+    fig.update_xaxes(**axis_common)
+    fig.update_yaxes(**axis_common)
     return fig
 
 
 def _empty(msg: str) -> None:
     st.info(msg)
+
+
+def _show(fig: go.Figure) -> None:
+    st.plotly_chart(fig, use_container_width=True, config=_PLOTLY_CONFIG)
 
 
 # ── 1. Top crime types (RUBRICA) — barra horizontal ──────────────────────────
@@ -124,22 +119,22 @@ def render_top_rubricas(con: duckdb.DuckDBPyConnection, where: str, top_n: int =
         df, x="occurrences", y="RUBRICA", orientation="h",
         labels={"occurrences": "Ocorrências", "RUBRICA": ""},
         color="occurrences",
-        color_continuous_scale=BRUTAL_SCALE_RED,
+        color_continuous_scale=MONO_SCALE,
         text="occurrences",
     )
     fig.update_traces(
         textposition="outside",
-        textfont=dict(family="Archivo Black", size=11, color=BRUTAL["ink"]),
-        marker_line_color=BRUTAL["ink"],
-        marker_line_width=2,
+        textfont=dict(family="Public Sans", size=11, color=MONO["ink"]),
+        marker_line_color=MONO["ink"],
+        marker_line_width=0.5,
         cliponaxis=False,
     )
     fig.update_layout(
         yaxis={"categoryorder": "total ascending"},
         coloraxis_showscale=False,
     )
-    _apply_brutal_layout(fig, height=500, title=f"Top {top_n} Tipos de Crime")
-    st.plotly_chart(fig, use_container_width=True)
+    _apply_minimal_layout(fig, height=500, title=f"Top {top_n} Tipos de Crime")
+    _show(fig)
 
 
 # ── 2. Tendência mensal — linhas ──────────────────────────────────────────────
@@ -169,17 +164,22 @@ def render_monthly_trend(con: duckdb.DuckDBPyConnection, where: str) -> None:
         df, x="period", y="occurrences", color="ANO",
         labels={"period": "Mês", "occurrences": "Ocorrências", "ANO": "Ano"},
         markers=True,
-        color_discrete_sequence=BRUTAL_SEQ,
+        color_discrete_sequence=MONO_SEQ,
     )
-    fig.update_traces(line=dict(width=3), marker=dict(size=9, line=dict(color="#000", width=2)))
+    # Diferencia cada ano também pelo traço (legível em P&B).
+    for i, trace in enumerate(fig.data):
+        trace.line.width = 2.5
+        trace.line.dash = _DASHES[i % len(_DASHES)]
+        trace.marker.size = 7
+        trace.marker.line = dict(color=MONO["paper"], width=1)
     fig.update_xaxes(
         tickmode="array",
         tickvals=[str(m).zfill(2) for m in range(1, 13)],
         ticktext=["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
                   "Jul", "Ago", "Set", "Out", "Nov", "Dez"],
     )
-    _apply_brutal_layout(fig, height=420, title="Tendência mensal por ano")
-    st.plotly_chart(fig, use_container_width=True)
+    _apply_minimal_layout(fig, height=420, title="Tendência mensal por ano")
+    _show(fig)
 
 
 # ── 3. Categoria de crime — donut ─────────────────────────────────────────────
@@ -209,24 +209,24 @@ def render_crime_category_pie(con: duckdb.DuckDBPyConnection, where: str) -> Non
         df, names="category", values="occurrences",
         color="category",
         color_discrete_map={
-            "Furto":  BRUTAL["ink"],
-            "Roubo":  BRUTAL["accent"],
-            "Outros": BRUTAL["soft"],
+            "Furto":  MONO["ink"],
+            "Roubo":  MONO["soft"],
+            "Outros": MONO["faint"],
         },
-        hole=0.55,
+        hole=0.58,
     )
     fig.update_traces(
         textinfo="percent+label",
-        textfont=dict(family="Archivo Black", size=13, color="#fff"),
-        marker=dict(line=dict(color=BRUTAL["ink"], width=3)),
-        pull=[0.02, 0.02, 0.02],
+        textfont=dict(family="Public Sans", size=13, color="#FFFFFF"),
+        marker=dict(line=dict(color=MONO["paper"], width=2)),
+        sort=False,
     )
-    _apply_brutal_layout(fig, height=500, title="Categoria de Crime")
+    _apply_minimal_layout(fig, height=500, title="Categoria de Crime")
     fig.update_layout(showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    _show(fig)
 
 
-# ── 4. Top BAIRROS (renomeado de "municipios" — só SP capital) ───────────────
+# ── 4. Top BAIRROS (só SP capital) ───────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _q_top_bairros(_con, where: str, top_n: int) -> pd.DataFrame:
@@ -241,7 +241,7 @@ def _q_top_bairros(_con, where: str, top_n: int) -> pd.DataFrame:
 
 
 def render_top_municipios(con: duckdb.DuckDBPyConnection, where: str, top_n: int = 15) -> None:
-    """Mantém o nome antigo p/ compatibilidade com o app.py, mas agora mostra BAIRROS."""
+    """Mantém o nome antigo p/ compatibilidade com o app.py, mas mostra BAIRROS."""
     df = _q_top_bairros(con, where, top_n)
     if df.empty:
         _empty("Sem dados de bairro para os filtros selecionados.")
@@ -249,20 +249,20 @@ def render_top_municipios(con: duckdb.DuckDBPyConnection, where: str, top_n: int
     fig = px.bar(
         df, x="bairro", y="occurrences",
         labels={"bairro": "Bairro", "occurrences": "Ocorrências"},
-        color="occurrences", color_continuous_scale=BRUTAL_SCALE_INK,
+        color="occurrences", color_continuous_scale=MONO_SCALE,
         text="occurrences",
     )
     fig.update_traces(
         textposition="outside",
-        textfont=dict(family="Archivo Black", size=10, color=BRUTAL["ink"]),
-        marker_line_color=BRUTAL["ink"],
-        marker_line_width=2,
+        textfont=dict(family="Public Sans", size=10, color=MONO["ink"]),
+        marker_line_color=MONO["ink"],
+        marker_line_width=0.5,
         cliponaxis=False,
     )
     fig.update_xaxes(tickangle=40)
     fig.update_layout(coloraxis_showscale=False)
-    _apply_brutal_layout(fig, height=460, title=f"Top {top_n} Bairros — SP Capital")
-    st.plotly_chart(fig, use_container_width=True)
+    _apply_minimal_layout(fig, height=460, title=f"Top {top_n} Bairros — SP Capital")
+    _show(fig)
 
 
 # ── 5. Heatmap dia-da-semana × período ────────────────────────────────────────
@@ -300,24 +300,23 @@ def render_heatmap_period(con: duckdb.DuckDBPyConnection, where: str) -> None:
             z=pivot.values.tolist(),
             x=pivot.columns.tolist(),
             y=pivot.index.tolist(),
-            colorscale=BRUTAL_SCALE_RED,
+            colorscale=MONO_SCALE,
             hoverongaps=False,
-            xgap=3, ygap=3,                       # "grid" brutalista entre células
+            xgap=2, ygap=2,
             colorbar=dict(
-                outlinecolor=BRUTAL["ink"],
-                outlinewidth=2,
-                tickfont=dict(family="Public Sans", color=BRUTAL["ink"]),
-                title=dict(text="Ocorr.", font=dict(family="Archivo Black", size=11)),
+                outlinewidth=0,
+                tickfont=dict(family="Public Sans", color=MONO["muted"]),
+                title=dict(text="Ocorr.", font=dict(family="Public Sans", size=11)),
             ),
             text=pivot.values,
             texttemplate="%{text:,}",
-            textfont=dict(family="Archivo Black", size=11, color=BRUTAL["ink"]),
+            textfont=dict(family="Public Sans", size=11, color=MONO["ink"]),
         )
     )
-    _apply_brutal_layout(fig, height=360, title="Dia da semana × Período do dia")
+    _apply_minimal_layout(fig, height=360, title="Dia da semana × Período do dia")
     fig.update_xaxes(title_text="Dia")
     fig.update_yaxes(title_text="Período")
-    st.plotly_chart(fig, use_container_width=True)
+    _show(fig)
 
 
 # ── 6. Mapa geo (amostra) ─────────────────────────────────────────────────────
@@ -339,7 +338,7 @@ def render_crime_map(con: duckdb.DuckDBPyConnection, where: str, max_points: int
         _empty("Sem registros geocodificados para os filtros selecionados.")
         return
 
-    # Agrupa rubricas raras em "Outros" pra manter a legenda enxuta
+    # Agrupa rubricas raras em "Outros" pra manter a legenda enxuta.
     top_rub = df["RUBRICA"].value_counts().head(8).index
     df["RUBRICA_PLOT"] = df["RUBRICA"].where(df["RUBRICA"].isin(top_rub), "Outros")
 
@@ -350,27 +349,27 @@ def render_crime_map(con: duckdb.DuckDBPyConnection, where: str, max_points: int
         hover_data={"NOME_MUNICIPIO": True, "BAIRRO": True,
                     "RUBRICA": True, "RUBRICA_PLOT": False,
                     "LATITUDE": False, "LONGITUDE": False},
-        zoom=10, height=560, opacity=0.75,
-        color_discrete_sequence=BRUTAL_SEQ + ["#991B1B", "#525252", "#262626"],
+        zoom=10, height=560, opacity=0.7,
+        color_discrete_sequence=MONO_SEQ + ["#1F1F1F", "#616161", "#2E2E2E"],
     )
     fig.update_traces(marker=dict(size=7))
     fig.update_layout(
         mapbox_style="carto-positron",
-        margin=dict(l=0, r=0, t=44, b=0),
-        paper_bgcolor=BRUTAL["paper"],
+        margin=dict(l=0, r=0, t=40, b=0),
+        paper_bgcolor=MONO["paper"],
         title=dict(
-            text=f"<b>MAPA DE INCIDENTES — {len(df):,} REGISTROS AMOSTRADOS</b>".replace(",", "."),
-            font=dict(family="Archivo Black", size=14, color=BRUTAL["ink"]),
+            text=f"<b>Mapa de incidentes — {len(df):,} registros amostrados</b>".replace(",", "."),
+            font=dict(family="Public Sans", size=14, color=MONO["ink"]),
             x=0.01, xanchor="left",
         ),
         legend=dict(
-            title=dict(text="<b>RUBRICA</b>", font=dict(family="Archivo Black", size=11)),
-            bgcolor="rgba(255,255,255,0.95)",
-            bordercolor=BRUTAL["ink"], borderwidth=2,
+            title=dict(text="<b>Rubrica</b>", font=dict(family="Public Sans", size=11)),
+            bgcolor="rgba(255,255,255,0.9)",
+            bordercolor=MONO["line"], borderwidth=1,
             font=dict(family="Public Sans", size=10),
         ),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    _show(fig)
 
 
 # ── 7. YoY Furto vs Roubo ─────────────────────────────────────────────────────
@@ -405,14 +404,16 @@ def render_yoy_comparison(con: duckdb.DuckDBPyConnection, where: str) -> None:
     fig = px.bar(
         df_m, x="ANO", y="count", color="type", barmode="group",
         labels={"ANO": "Ano", "count": "Ocorrências", "type": ""},
-        color_discrete_map={"Furto": BRUTAL["ink"], "Roubo": BRUTAL["accent"]},
+        color_discrete_map={"Furto": MONO["ink"], "Roubo": MONO["soft"]},
         text_auto=True,
     )
     fig.update_traces(
-        marker_line_color=BRUTAL["ink"], marker_line_width=2,
-        textfont=dict(family="Archivo Black", size=10, color=BRUTAL["ink"]),
+        marker_line_color=MONO["ink"], marker_line_width=0.5,
+        textfont=dict(family="Public Sans", size=10, color=MONO["ink"]),
         textposition="outside",
         cliponaxis=False,
     )
-    _apply_brutal_layout(fig, height=460, title="Furtos vs Roubos por Ano")
-    st.plotly_chart(fig, use_container_width=True)
+    # Hachura na série "Roubo" → distinção sem cor.
+    fig.update_traces(marker_pattern_shape="/", selector=dict(name="Roubo"))
+    _apply_minimal_layout(fig, height=460, title="Furtos vs Roubos por Ano")
+    _show(fig)
