@@ -7,9 +7,12 @@
 # Dashboard
 streamlit>=1.35.0
 
-# Data pipeline (clean_ingest.py)
+# Data pipeline (src/data_pipeline)
 pandas>=2.1.0
 pyarrow>=14.0.0          # Arrow engine — used by DuckDB COPY … TO parquet
+requests>=2.31.0         # download das fontes públicas (SSP-SP)
+openpyxl>=3.1.0          # leitura de planilhas .xlsx
+xlrd>=2.0.1             # leitura de planilhas .xls (legado)
 
 # Analytical query engine (app.py reads the Parquet via DuckDB VIEW)
 duckdb>=0.10.0

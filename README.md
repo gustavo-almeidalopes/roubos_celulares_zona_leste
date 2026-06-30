@@ -46,6 +46,52 @@ Os dados utilizados são provenientes exclusivamente de fontes oficiais do Gover
 
 ---
 
+## ⚙️ Configuração de Fontes (Pipeline)
+
+O bloco abaixo é a **fonte única de configuração** do pipeline de ingestão. O módulo
+[`src/data_pipeline/config.py`](src/data_pipeline/config.py) lê o **primeiro bloco `json`** deste README
+que contenha a chave `sources`. Para registrar uma nova fonte, basta adicionar um objeto ao array
+`sources` — nenhum código precisa mudar.
+
+```json
+{
+  "sources": [
+    {
+      "name": "celulares_subtraidos",
+      "url": "<COLE A URL DO XLSX/CSV DA SSP-SP AQUI>",
+      "format": "xlsx",
+      "enabled": true,
+      "sheet": 0,
+      "sep": ";",
+      "encoding": "utf-8"
+    }
+  ],
+  "schema": {
+    "bbox": { "lat_min": -25.5, "lat_max": -19.5, "lon_min": -53.0, "lon_max": -44.0 }
+  }
+}
+```
+
+**Campos de cada fonte**
+
+| Campo | Obrigatório | Descrição |
+|---|---|---|
+| `name` | sim | Identificador da fonte. Também é o nome do arquivo em `data/raw/` (ex.: `celulares_subtraidos.xlsx`). |
+| `format` | sim | `xlsx`, `xls` ou `csv`. |
+| `url` | não | URL http(s) de download. Se ausente, inválida ou placeholder, o pipeline usa o arquivo local (**modo drop manual**). |
+| `enabled` | não | `true`/`false` para ligar/desligar a fonte (padrão `true`). |
+| `sheet` | não | Índice/nome da aba do Excel (padrão `0`). |
+| `sep` / `encoding` | não | Apenas para fontes `csv` (padrão `;` / `utf-8`). |
+
+**Dois modos de operação**
+
+1. **Automático** — preencha `url` com o link real do XLSX/CSV da SSP-SP. O pipeline baixa, converte e processa sozinho (use o GitHub Actions abaixo para rodar de forma agendada).
+2. **Drop manual** — deixe `url` como placeholder e coloque o arquivo em `src/data/raw/<name>.<formato>`. Útil enquanto a URL direta da SSP-SP não está disponível.
+
+> O `bbox` define a caixa delimitadora do Estado de SP: coordenadas fora dela são anuladas na limpeza.
+
+---
+
 ## ✨ Funcionalidades
 
 ### KPIs (Cards de Métricas)
@@ -160,9 +206,16 @@ sp-public-safety-dashboard/
 │   │   ├── filters.py                  # Widgets da sidebar + WHERE builder
 │   │   └── metrics.py                  # KPI cards (5 métricas)
 │   │
-│   ├── data_pipeline/
+│   ├── data_pipeline/                  # Pipeline modular de ingestão
 │   │   ├── __init__.py
-│   │   └── clean_ingest.py             # Pipeline de ingestão CLI (+1M rows)
+│   │   ├── __main__.py                 # `python -m src.data_pipeline`
+│   │   ├── cli.py                      # CLI (subcomando `run`)
+│   │   ├── config.py                   # lê a config de fontes do README
+│   │   ├── download.py                 # baixa as fontes (+ fallback manual)
+│   │   ├── convert.py                  # Excel (xls/xlsx) → CSV
+│   │   ├── clean.py                    # limpeza/normalização em chunks
+│   │   ├── validate.py                 # validação + relatório de qualidade
+│   │   └── pipeline.py                 # orquestrador
 │   │
 │   └── data/
 │       ├── raw/
@@ -197,24 +250,22 @@ cd sp-public-safety-dashboard
 pip install -r requirements.txt
 ```
 
-### 3. Baixe e posicione o CSV bruto da SSP-SP
+### 3. Forneça os dados da SSP-SP
 
-Acesse [ssp.sp.gov.br/estatistica/dados-mensais](https://www.ssp.sp.gov.br/estatistica/dados-mensais), baixe o arquivo de celulares subtraídos e salve em:
+Há dois caminhos (veja [Configuração de Fontes](#️-configuração-de-fontes-pipeline)):
 
-```
-src/data/raw/CelularesSubtraidos.csv
-```
+- **Automático:** preencha a `url` da fonte no bloco de config do README. O pipeline baixa sozinho.
+- **Drop manual:** baixe o arquivo de celulares subtraídos em [ssp.sp.gov.br/estatistica/dados-mensais](https://www.ssp.sp.gov.br/estatistica/dados-mensais) e salve como `src/data/raw/celulares_subtraidos.xlsx` (também aceita `.xls`/`.csv`).
 
-> O arquivo deve ser delimitado por ponto e vírgula (`;`). Qualquer exportação padrão da SSP-SP é compatível.
+> Excel é convertido para CSV automaticamente. Fontes CSV usam `;` por padrão (configurável).
 
-### 4. Execute o pipeline de ingestão (uma única vez)
+### 4. Execute o pipeline de ingestão
 
 ```bash
-python -m src.data_pipeline.clean_ingest \
-    --input src/data/raw/CelularesSubtraidos.csv
+python -m src.data_pipeline run
 ```
 
-O pipeline processa em chunks de 50.000 linhas e exibe o progresso em tempo real no terminal. Um arquivo de 1 milhão de linhas leva tipicamente entre 30 e 90 segundos.
+O pipeline baixa (se houver URL), converte Excel→CSV, limpa em chunks de 50.000 linhas, valida e exporta o Parquet — exibindo o progresso em tempo real. Um arquivo de 1 milhão de linhas leva tipicamente entre 30 e 90 segundos.
 
 **Exemplo de saída esperada:**
 ```
@@ -235,15 +286,19 @@ O pipeline processa em chunks de 50.000 linhas e exibe o progresso em tempo real
 **Flags completas do CLI:**
 
 ```
-python -m src.data_pipeline.clean_ingest --help
+python -m src.data_pipeline run --help
 
-  --input,      -i   Caminho para o CSV bruto                (obrigatório)
-  --output-dir, -o   Diretório de saída                      (padrão: src/data/processed)
-  --chunk-size, -c   Linhas por chunk                        (padrão: 50000)
-  --sep              Delimitador do CSV                      (padrão: ;)
-  --encoding         Encoding do arquivo                     (padrão: utf-8)
-                     ↳ tente latin-1 se aparecerem erros de decodificação
+  --readme        Caminho do README com a config de fontes   (padrão: ./README.md)
+  --raw-dir       Diretório dos arquivos brutos              (padrão: src/data/raw)
+  --out-dir       Diretório de saída (Parquet + relatório)   (padrão: src/data/processed)
+  --source        Processa apenas a fonte com este 'name'    (padrão: todas)
+  --chunk-size    Linhas por chunk na limpeza                (padrão: 50000)
+  --keep-duckdb   Mantém o crimes.duckdb após a execução     (padrão: descarta)
+  --log-level     DEBUG | INFO | WARNING | ERROR             (padrão: INFO)
 ```
+
+Saídas geradas em `src/data/processed/`: `cleaned_data.parquet` (consumido pelo app) e
+`quality_report.md` (relatório de qualidade: linhas, % de nulos por coluna, % geocodificado).
 
 ### 5. Inicie o dashboard
 
@@ -271,6 +326,27 @@ git push
 3. Acesse [share.streamlit.io](https://share.streamlit.io) → **New app** → aponte para `src/app.py`
 
 4. O app lê o Parquet diretamente — nenhum servidor de banco de dados necessário
+
+---
+
+## ▲ Landing page no Vercel
+
+O Vercel **não roda Streamlit** (precisa de servidor persistente). A estratégia é:
+o **app interativo** roda no Streamlit Cloud e uma **landing page estática** (em
+[`web/index.html`](web/index.html)) é publicada no Vercel apontando para ele.
+
+**Deploy (dashboard do Vercel):**
+1. [vercel.com/new](https://vercel.com/new) → importe o repositório `roubos_celulares_zona_leste`.
+2. Em **Framework Preset** escolha **Other**. O [`vercel.json`](vercel.json) já define a saída estática (`web/`) e desliga build/install — o Vercel só serve a página.
+3. **Deploy**. A landing page sobe e o botão "Abrir dashboard" leva ao app no Streamlit.
+
+**Deploy (CLI):**
+```bash
+npm i -g vercel
+vercel --prod   # na raiz do repositório; o vercel.json cuida do resto
+```
+
+> Para trocar o link do dashboard, edite a URL do Streamlit em `web/index.html`.
 
 ---
 
@@ -320,7 +396,9 @@ O `clean_ingest.py` aplica as seguintes transformações em cada chunk antes de 
 - [ ] Adicionar camada de dados populacionais (IBGE) para calcular taxa de ocorrências per capita por município
 
 ### 🤖 Automação de Dados
-- [ ] Script de captura automática dos CSVs via scraping do portal da SSP-SP (agendado via cron ou GitHub Actions)
+- [x] Pipeline modular (download → Excel→CSV → limpeza → validação → Parquet) configurável pelo README
+- [x] Execução agendada via **GitHub Actions** (cron + disparo manual) com commit automático do Parquet
+- [ ] Descoberta automática da URL do XLSX no portal JS da SSP-SP (scraping) — hoje a URL é declarada no README
 - [ ] Pipeline de atualização incremental: processar apenas os novos registros em vez de reingerir tudo
 - [ ] Notificação automática (e-mail / webhook) quando novos dados forem disponibilizados pela SSP-SP
 
@@ -331,11 +409,11 @@ O `clean_ingest.py` aplica as seguintes transformações em cada chunk antes de 
 - [ ] Remoção automática de colunas com mais de X% de valores nulos (configurável)
 
 ### 🎨 Aparência e Acessibilidade
-- [ ] Redesign visual com tema customizado no Streamlit (cores, fontes, espaçamentos)
+- [x] Redesign minimalista monocromático (preto & branco) com tema customizado no Streamlit
+- [x] Melhor contraste e tamanho de fonte para acessibilidade + foco visível (rumo a WCAG 2.1 AA)
+- [x] Layout responsivo (desktop + mobile)
 - [ ] Implementar modo escuro (dark mode)
-- [ ] Melhorar contraste e tamanho de fonte para acessibilidade (WCAG 2.1 AA)
-- [ ] Adicionar tooltips explicativos em cada gráfico e KPI card
-- [ ] Versão mobile-friendly com layout responsivo
+- [ ] Adicionar tooltips explicativos em cada gráfico (KPI cards já têm `help`)
 - [ ] Adicionar suporte a português para todos os rótulos do dashboard (atualmente em inglês)
 - [ ] Incluir seção "Como ler este dashboard" para usuários não-técnicos
 

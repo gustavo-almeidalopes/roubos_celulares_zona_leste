@@ -49,160 +49,161 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Brutalist theme (inspirado no index.html / Radar Celular SP) ──────────────
+# ── Tema minimalista monocromático (preto & branco, analytics moderno) ────────
 st.markdown(
     """
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Public+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     :root {
-        --brutal-bg:     #E5E5E5;
-        --brutal-card:   #FFFFFF;
-        --brutal-ink:    #000000;
-        --brutal-muted:  #404040;
-        --brutal-soft:   #A3A3A3;
-        --brutal-accent: #DC2626;
+        --bg:            #FAFAFA;
+        --surface:       #FFFFFF;
+        --ink:           #0A0A0A;
+        --text:          #1A1A1A;
+        --muted:         #6B7280;
+        --border:        #E5E7EB;
+        --border-strong: #D1D5DB;
+        --hover:         #F3F4F6;
     }
 
     /* Base */
     html, body, [class*="css"], .stApp {
+        font-family: 'Public Sans', system-ui, -apple-system, sans-serif !important;
+        background-color: var(--bg) !important;
+        color: var(--text) !important;
+        font-size: 15px;
+    }
+    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1440px; }
+
+    /* Headings */
+    h1, h2, h3, h4 {
         font-family: 'Public Sans', sans-serif !important;
-        background-color: var(--brutal-bg) !important;
-        color: var(--brutal-ink) !important;
+        color: var(--ink) !important;
+        font-weight: 700;
+        letter-spacing: -0.01em;
     }
-    .block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 1500px; }
+    h1 { font-size: 1.9rem !important; line-height: 1.15 !important; }
 
-    /* Headings — Archivo Black */
-    h1, h2, h3, h4, .font-brutal {
-        font-family: 'Archivo Black', sans-serif !important;
-        color: var(--brutal-ink) !important;
-        letter-spacing: -0.5px;
+    /* Header limpo */
+    .app-header {
+        padding: 0 0 1.2rem 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1.6rem;
     }
-    h1 { font-size: 2.6rem !important; line-height: 1 !important; }
+    .app-header h1 {
+        margin: 0 !important;
+        display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+    }
+    .app-header .badge {
+        font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+        background: var(--ink); color: #fff; padding: 3px 9px;
+        border-radius: 999px; font-weight: 700;
+    }
+    .app-header p { margin: .45rem 0 0 0; color: var(--muted); font-size: .85rem; }
 
-    /* Header bar */
-    .brutal-header {
-        background: var(--brutal-ink);
-        color: #fff;
-        padding: 1.2rem 1.4rem;
-        border: 3px solid #000;
-        box-shadow: 6px 6px 0 0 #000;
-        margin-bottom: 1.4rem;
-    }
-    .brutal-header h1 { color: #fff !important; margin: 0 !important; }
-    .brutal-header .tag {
-        display: inline-block;
-        background: var(--brutal-accent);
-        color: #fff;
-        padding: 2px 10px;
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 0.75rem;
-        margin-left: 8px;
-        border: 2px solid #fff;
-        vertical-align: middle;
-    }
-    .brutal-header p { margin: 6px 0 0 0; color: #A3A3A3; font-size: 0.85rem; }
-
-    /* Metric cards — caixinhas brutalistas */
+    /* Metric cards — limpos, hairline */
     [data-testid="stMetric"] {
-        background: var(--brutal-card) !important;
-        border: 3px solid #000 !important;
-        box-shadow: 5px 5px 0 0 #000 !important;
-        padding: 14px 16px !important;
-        border-radius: 0 !important;
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important;
+        padding: 1rem 1.1rem !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
     }
     [data-testid="stMetricLabel"] {
-        font-family: 'Archivo Black', sans-serif !important;
-        text-transform: uppercase;
-        font-size: 0.7rem !important;
-        color: var(--brutal-muted) !important;
+        text-transform: uppercase; letter-spacing: .05em;
+        font-size: .68rem !important; font-weight: 600;
+        color: var(--muted) !important;
     }
     [data-testid="stMetricValue"] {
-        font-family: 'Archivo Black', sans-serif !important;
-        color: #000 !important;
-        font-size: 1.8rem !important;
+        color: var(--ink) !important;
+        font-size: 1.7rem !important; font-weight: 700;
+    }
+    /* Deltas em escala de cinza (sem verde/vermelho) — identidade B&W */
+    [data-testid="stMetricDelta"] { color: var(--muted) !important; }
+    [data-testid="stMetricDelta"] svg {
+        stroke: var(--muted) !important; fill: var(--muted) !important;
     }
 
-    /* Plotly chart wrapper → caixa brutalista */
+    /* Plotly chart wrapper */
     [data-testid="stPlotlyChart"] {
-        background: #fff;
-        border: 3px solid #000;
-        box-shadow: 5px 5px 0 0 #000;
-        padding: 8px;
-        margin-bottom: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: .6rem .6rem .2rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        margin-bottom: .4rem;
     }
 
-    /* Dividers — linha preta sólida */
+    /* Dividers — hairline */
     hr, [data-testid="stDivider"] {
         border: none !important;
-        border-top: 3px solid #000 !important;
-        margin: 1.6rem 0 !important;
+        border-top: 1px solid var(--border) !important;
+        margin: 1.4rem 0 !important;
     }
 
     /* Sidebar */
     [data-testid="stSidebar"] {
-        background: var(--brutal-card) !important;
-        border-right: 3px solid #000 !important;
-    }
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] .stMarkdown {
-        font-family: 'Archivo Black', sans-serif !important;
+        background: var(--surface) !important;
+        border-right: 1px solid var(--border) !important;
     }
     [data-testid="stSidebar"] [data-baseweb="select"] > div {
-        border: 2px solid #000 !important;
-        border-radius: 0 !important;
-        box-shadow: 3px 3px 0 0 #000;
-        background: #fff !important;
+        border: 1px solid var(--border-strong) !important;
+        border-radius: 8px !important;
+        background: var(--surface) !important;
     }
 
     /* Botões */
     .stButton > button, .stDownloadButton > button {
-        background: #000 !important;
+        background: var(--ink) !important;
         color: #fff !important;
-        border: 3px solid #000 !important;
-        border-radius: 0 !important;
-        font-family: 'Archivo Black', sans-serif !important;
-        text-transform: uppercase;
-        box-shadow: 4px 4px 0 0 #000;
-        transition: transform .05s ease;
+        border: 1px solid var(--ink) !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
+        transition: background .15s ease, opacity .15s ease;
     }
     .stButton > button:hover, .stDownloadButton > button:hover {
-        background: var(--brutal-accent) !important;
-        border-color: #000 !important;
-        transform: translate(-1px, -1px);
-        box-shadow: 5px 5px 0 0 #000;
+        background: #262626 !important;
+        border-color: #262626 !important;
     }
 
     /* Expanders */
     [data-testid="stExpander"] {
-        background: #fff !important;
-        border: 3px solid #000 !important;
-        border-radius: 0 !important;
-        box-shadow: 5px 5px 0 0 #000;
-        margin-bottom: 1rem;
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        margin-bottom: .8rem;
     }
-    [data-testid="stExpander"] summary {
-        font-family: 'Archivo Black', sans-serif !important;
-        text-transform: uppercase;
-    }
+    [data-testid="stExpander"] summary { font-weight: 600 !important; }
 
     /* Alerts */
     [data-testid="stAlert"] {
-        border: 3px solid #000 !important;
-        border-radius: 0 !important;
-        box-shadow: 4px 4px 0 0 #000;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
     }
 
     /* Dataframe */
     [data-testid="stDataFrame"] {
-        border: 3px solid #000;
-        box-shadow: 5px 5px 0 0 #000;
+        border: 1px solid var(--border);
+        border-radius: 10px;
     }
 
     /* Caption */
     .stCaption, [data-testid="stCaptionContainer"] {
-        color: var(--brutal-muted) !important;
-        font-weight: 700;
+        color: var(--muted) !important;
+        font-weight: 500;
+    }
+
+    /* Acessibilidade — foco visível */
+    :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+    /* Responsivo (mobile) */
+    @media (max-width: 768px) {
+        .block-container { padding-left: .6rem; padding-right: .6rem; padding-top: 1rem; }
+        h1 { font-size: 1.5rem !important; }
+        [data-testid="stMetricValue"] { font-size: 1.35rem !important; }
+        [data-testid="stMetricLabel"] { font-size: .62rem !important; }
     }
 </style>
     """,
@@ -214,7 +215,8 @@ st.markdown(
 # A view `crimes` expõe APENAS o município de São Paulo (capital). Como todas
 # as queries dos componentes consultam `crimes`, o filtro vale para o app
 # inteiro automaticamente — não há como "escapar" dele acidentalmente.
-SP_CAPITAL_FILTER = """ //Ver para por todos os bairros da zona leste de Sp
+SP_CAPITAL_FILTER = """
+    -- TODO: avaliar incluir todos os bairros da Zona Leste de SP
     UPPER(TRIM(NOME_MUNICIPIO)) IN (
         'S.PAULO', 'SAO PAULO', 'SÃO PAULO', 'S. PAULO', 'SP'
     )
@@ -238,20 +240,16 @@ def _get_connection(parquet_path: str) -> duckdb.DuckDBPyConnection | None:
 # ── Setup screen ──────────────────────────────────────────────────────────────
 def _show_setup_screen() -> None:
     st.markdown(
-        '<div class="brutal-header"><h1>◼ RADAR SEGURANÇA SP'
-        '<span class="tag">CAPITAL</span></h1>'
+        '<div class="app-header"><h1>Radar Segurança SP'
+        '<span class="badge">Capital</span></h1>'
         '<p>Dados não encontrados — siga os passos abaixo</p></div>',
         unsafe_allow_html=True,
     )
     st.error("**Nenhum dado processado encontrado.**")
-    st.markdown("### 1 — Coloque o CSV bruto")
-    st.code("src/data/raw/ocorrencias_full.csv", language="text")
+    st.markdown("### 1 — Coloque o arquivo bruto (XLS/XLSX/CSV)")
+    st.code("src/data/raw/celulares_subtraidos.xlsx", language="text")
     st.markdown("### 2 — Rode o pipeline")
-    st.code(
-        "python -m src.data_pipeline.clean_ingest \\\n"
-        "    --input src/data/raw/ocorrencias_full.csv",
-        language="bash",
-    )
+    st.code("python -m src.data_pipeline run", language="bash")
     st.markdown("### 3 — Inicie o app")
     st.code("streamlit run src/app.py", language="bash")
 
@@ -269,8 +267,8 @@ total_sp = con.execute("SELECT COUNT(*) FROM crimes").fetchone()[0]
 # ── Header brutalista ─────────────────────────────────────────────────────────
 st.markdown(
     f'''
-    <div class="brutal-header">
-        <h1>◼ RADAR SEGURANÇA SP <span class="tag">CAPITAL</span></h1>
+    <div class="app-header">
+        <h1>Radar Segurança SP <span class="badge">Capital</span></h1>
         <p>Fonte: SSP-SP · {total_sp:,} ocorrências no município de São Paulo · DuckDB + Streamlit</p>
     </div>
     '''.replace(",", "."),
