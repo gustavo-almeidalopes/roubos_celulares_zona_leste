@@ -10,8 +10,8 @@ Como rodar
 ----------
     streamlit run src/app.py
 
-Pipeline (rodar uma vez antes):
-    python -m src.data_pipeline.clean_ingest --input src/data/raw/SEU_ARQUIVO.csv
+Pipeline (rodar antes para gerar o Parquet):
+    python -m src.data_pipeline run
 """
 
 from __future__ import annotations
