@@ -1,11 +1,13 @@
-# ── Raw data (never commit the giant CSV) ────────────────────────────────────
+# ── Raw data (never commit the giant CSV/XLSX) ────────────────────────────────
 src/data/raw/
 
-# ── DuckDB database file (local only — regenerate with clean_ingest.py) ──────
+# ── DuckDB database file (local only — regenerate with `python -m src.data_pipeline run`)
 src/data/processed/*.duckdb
 
-# ── Parquet IS committed (needed for Streamlit Cloud deployment) ─────────────
+# ── Parquet snapshots ARE committed (needed for the static React/Vercel build,
+# which has no server to run the Python pipeline at deploy time) ─────────────
 # src/data/processed/cleaned_data.parquet   ← keep in git
+# web/public/data/cleaned_data.parquet      ← keep in git (mesmo snapshot, servido pro DuckDB-WASM)
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
@@ -15,6 +17,12 @@ __pycache__/
 venv/
 env/
 .env
+
+# ── Node / Vite (dashboard React em web/) ─────────────────────────────────────
+web/node_modules/
+web/dist/
+web/.vite/
+npm-debug.log*
 
 # ── OS / editor ──────────────────────────────────────────────────────────────
 .DS_Store

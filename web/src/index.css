@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Tema monocromático — mesma identidade do dashboard anterior. */
+@theme {
+  --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
+
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-ink: #0a0a0a;
+  --color-text: #1a1a1a;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-hover: #f3f4f6;
+
+  --color-mono-1: #0a0a0a;
+  --color-mono-2: #404040;
+  --color-mono-3: #737373;
+  --color-mono-4: #9ca3af;
+  --color-mono-5: #d4d4d4;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}

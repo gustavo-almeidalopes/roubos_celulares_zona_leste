@@ -22,6 +22,7 @@ Decisões de robustez (para a automação rodar sem babá no GitHub Actions):
 from __future__ import annotations
 
 import logging
+import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,6 +38,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_README = _REPO_ROOT / "README.md"
 DEFAULT_RAW_DIR = _REPO_ROOT / "src" / "data" / "raw"
 DEFAULT_OUT_DIR = _REPO_ROOT / "src" / "data" / "processed"
+# Cópia consumida pelo dashboard React (DuckDB-WASM lê este arquivo via fetch).
+WEB_PUBLIC_DATA_DIR = _REPO_ROOT / "web" / "public" / "data"
 
 TABLE = "crimes"
 PARQUET_NAME = "cleaned_data.parquet"
@@ -186,6 +189,13 @@ def run(
             "(FORMAT PARQUET, COMPRESSION ZSTD)"
         )
         logger.info("Parquet exportado: %s", parquet_path)
+
+        # Sincroniza a cópia consumida pelo dashboard React (best-effort: a pasta
+        # web/ pode não existir em todo checkout, então não é um erro fatal).
+        if WEB_PUBLIC_DATA_DIR.parent.exists():
+            WEB_PUBLIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(parquet_path, WEB_PUBLIC_DATA_DIR / PARQUET_NAME)
+            logger.info("Parquet sincronizado para o dashboard React: %s", WEB_PUBLIC_DATA_DIR)
 
         final_rows = report["rows"]
         logger.info(

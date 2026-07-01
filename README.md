@@ -28,8 +28,12 @@ A stack foi projetada para escalar **sem servidor e sem banco de dados externo**
 
 | Recurso | Link |
 |---|---|
-| 🚀 **App ao vivo (Streamlit Cloud)** | https://rouboscelulareszonaleste-cpqy3z3r56vvkkpbhjfvhn.streamlit.app/ |
+| 🚀 **Dashboard (React, Vercel)** | deploy em `web/` — veja [Deploy no Vercel](#-deploy-no-vercel) |
 | 🐙 **Repositório GitHub** | https://github.com/gustavo-almeidalopes/roubos_celulares_zona_leste |
+
+> **Nota de stack:** o dashboard interativo foi migrado de Streamlit para **React + Tailwind + ECharts + AnimeJS**,
+> rodando 100% no navegador via **DuckDB-WASM** (sem servidor). O app Streamlit legado (`src/app.py`) continua no
+> repositório como referência, mas não é mais o front-end principal.
 
 ---
 
@@ -300,45 +304,37 @@ python -m src.data_pipeline run --help
 Saídas geradas em `src/data/processed/`: `cleaned_data.parquet` (consumido pelo app) e
 `quality_report.md` (relatório de qualidade: linhas, % de nulos por coluna, % geocodificado).
 
-### 5. Inicie o dashboard
+### 5. Inicie o dashboard (React)
+
+O dashboard vive em [`web/`](web/) — um app React (Vite) que roda **100% no navegador**: o
+motor SQL (DuckDB-WASM) carrega o `cleaned_data.parquet` diretamente via `fetch`, sem backend.
 
 ```bash
-streamlit run src/app.py
+cd web
+npm install
+npm run dev
 ```
 
-Acesse em `http://localhost:8501`.
+Acesse em `http://localhost:5173`. Para rodar contra dados atualizados, rode o pipeline Python
+primeiro (passo 4) — ele já copia o Parquet para `web/public/data/cleaned_data.parquet`
+automaticamente a cada execução.
+
+> **App Streamlit legado:** `streamlit run src/app.py` (requer `pip install -r requirements.txt`)
+> continua funcional em `src/app.py`, mas foi substituído pelo dashboard React como front-end principal.
 
 ---
 
-## ☁️ Deploy no Streamlit Cloud
+## ▲ Deploy no Vercel
 
-1. Execute o pipeline localmente para gerar o `cleaned_data.parquet`
-
-2. Commit o Parquet no repositório:
-```bash
-# Se o arquivo ultrapassar 100 MB, use Git LFS:
-git lfs track "*.parquet"
-git add src/data/processed/cleaned_data.parquet
-git commit -m "chore: add processed parquet"
-git push
-```
-
-3. Acesse [share.streamlit.io](https://share.streamlit.io) → **New app** → aponte para `src/app.py`
-
-4. O app lê o Parquet diretamente — nenhum servidor de banco de dados necessário
-
----
-
-## ▲ Landing page no Vercel
-
-O Vercel **não roda Streamlit** (precisa de servidor persistente). A estratégia é:
-o **app interativo** roda no Streamlit Cloud e uma **landing page estática** (em
-[`web/index.html`](web/index.html)) é publicada no Vercel apontando para ele.
+O dashboard React é um **site estático** (DuckDB-WASM roda no cliente) — ideal para o Vercel,
+que não conseguiria hospedar o antigo servidor Streamlit.
 
 **Deploy (dashboard do Vercel):**
 1. [vercel.com/new](https://vercel.com/new) → importe o repositório `roubos_celulares_zona_leste`.
-2. Em **Framework Preset** escolha **Other**. O [`vercel.json`](vercel.json) já define a saída estática (`web/`) e desliga build/install — o Vercel só serve a página.
-3. **Deploy**. A landing page sobe e o botão "Abrir dashboard" leva ao app no Streamlit.
+2. Em **Framework Preset** escolha **Other**. O [`vercel.json`](vercel.json) já define
+   `installCommand`/`buildCommand` (`cd web && npm install && npm run build`) e
+   `outputDirectory: web/dist`.
+3. **Deploy**. O Vercel builda o Vite app e serve o bundle estático — nenhum servidor necessário.
 
 **Deploy (CLI):**
 ```bash
@@ -346,7 +342,10 @@ npm i -g vercel
 vercel --prod   # na raiz do repositório; o vercel.json cuida do resto
 ```
 
-> Para trocar o link do dashboard, edite a URL do Streamlit em `web/index.html`.
+> O Parquet servido em produção é o commitado em `web/public/data/cleaned_data.parquet`. O
+> pipeline (`python -m src.data_pipeline run`) sincroniza esse arquivo automaticamente a cada
+> execução — local ou via o GitHub Actions agendado — então um novo deploy no Vercel após o
+> commit já reflete os dados atualizados.
 
 ---
 
@@ -355,17 +354,28 @@ vercel --prod   # na raiz do repositório; o vercel.json cuida do resto
 | Tecnologia | Versão recomendada | Papel no projeto |
 |---|---|---|
 | [Python](https://python.org/) | 3.9+ | Linguagem base |
-| [Streamlit](https://streamlit.io/) | latest | Framework do dashboard e deploy |
-| [DuckDB](https://duckdb.org/) | latest | Engine analítica in-process; VIEW sobre Parquet; queries SQL |
-| [Pandas](https://pandas.pydata.org/) | latest | Leitura do CSV em chunks e limpeza de dados |
-| [Plotly](https://plotly.com/python/) | latest | Todos os gráficos interativos (bar, line, pie, heatmap, scatter_mapbox) |
-| [Parquet + zstd](https://parquet.apache.org/) | — | Armazenamento colunar comprimido; gerado via DuckDB Arrow (sem round-trip Pandas) |
+| [DuckDB](https://duckdb.org/) | latest | Engine analítica; limpeza/validação no pipeline Python via `duckdb` |
+| [Pandas](https://pandas.pydata.org/) | latest | Leitura do CSV/Excel em chunks e limpeza de dados |
+| [Parquet + zstd](https://parquet.apache.org/) | — | Armazenamento colunar comprimido; gerado via DuckDB (sem round-trip Pandas) |
+
+**Dashboard (React — `web/`)**
+
+| Tecnologia | Papel no projeto |
+|---|---|
+| [React](https://react.dev/) + [Vite](https://vitejs.dev/) | SPA client-side, build estático |
+| [Tailwind CSS](https://tailwindcss.com/) v4 | Estilização utility-first, tema monocromático |
+| [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview) | Motor SQL rodando no navegador — lê o Parquet direto via `fetch`, sem backend |
+| [ECharts](https://echarts.apache.org/) (`echarts-for-react`) | Gráficos interativos (barra, linha, donut) |
+| [Anime.js](https://animejs.com/) | Animações de entrada (header, KPI cards, gráficos) |
+
+> **Legado:** o app Streamlit (`src/app.py`, `streamlit` + `plotly`) permanece no repositório e
+> funcional, mas não é mais o front-end principal — veja a nota de stack no início deste README.
 
 ---
 
 ## 🔧 Pipeline de Limpeza — Detalhes
 
-O `clean_ingest.py` aplica as seguintes transformações em cada chunk antes de persistir:
+O módulo [`src/data_pipeline/clean.py`](src/data_pipeline/clean.py) aplica as seguintes transformações em cada chunk antes de persistir:
 
 | Etapa | O que faz |
 |---|---|
