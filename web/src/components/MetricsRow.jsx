@@ -1,13 +1,13 @@
 import MetricCard from "./MetricCard";
-import { formatDeltaPct, formatInt, formatPct } from "../lib/format";
+import { formatDeltaPct, formatInt } from "../lib/format";
 
-/** Porta de metrics.py::render_metric_cards para React. */
+/** Cards de KPI (escopados à Zona Leste). */
 export default function MetricsRow({ metrics }) {
   if (!metrics) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="card p-4 h-[84px] animate-pulse" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="brutal-card-sm h-[92px] animate-pulse" />
         ))}
       </div>
     );
@@ -16,7 +16,7 @@ export default function MetricsRow({ metrics }) {
   const outros = Math.max(metrics.total - metrics.furtos - metrics.roubos, 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
       <MetricCard
         label="Total de ocorrências"
         value={formatInt(metrics.total)}
@@ -31,14 +31,9 @@ export default function MetricsRow({ metrics }) {
         delta={metrics.total ? `${((outros / metrics.total) * 100).toFixed(1)}% do total` : null}
       />
       <MetricCard
-        label="Delegacias envolvidas"
-        value={formatInt(metrics.delegacias)}
-        help="Distintas DPs com pelo menos um BO no recorte."
-      />
-      <MetricCard
-        label="% Geocodificado"
-        value={formatPct(metrics.geocodedPct)}
-        help="Percentual de BOs com latitude/longitude válidas."
+        label="Distritos"
+        value={formatInt(metrics.distritos)}
+        help="Distritos da Zona Leste com pelo menos um BO no recorte."
       />
     </div>
   );

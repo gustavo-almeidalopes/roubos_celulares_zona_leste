@@ -24,6 +24,15 @@ export function useEntranceAnimation(ready) {
       })
       .add(
         {
+          targets: '[data-animate="map"]',
+          opacity: [0, 1],
+          translateY: [16, 0],
+          duration: 460,
+        },
+        "-=200"
+      )
+      .add(
+        {
           targets: '[data-animate="metric-card"]',
           opacity: [0, 1],
           translateY: [14, 0],
