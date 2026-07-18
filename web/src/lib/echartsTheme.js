@@ -1,29 +1,33 @@
-/** Paleta e helpers de estilo ECharts — porta de components/charts.py (MONO/MONO_SEQ). */
+/** Paleta e helpers de estilo ECharts — tema brutalista em escala de cinza. */
 export const MONO = {
   ink: "#0a0a0a",
   paper: "#ffffff",
-  muted: "#6b7280",
-  soft: "#9ca3af",
-  faint: "#d4d4d4",
-  line: "#e5e7eb",
+  muted: "#404040",
+  soft: "#737373",
+  faint: "#a3a3a3",
+  line: "#0a0a0a",
 };
 
-export const MONO_SEQ = ["#0a0a0a", "#737373", "#a3a3a3", "#404040", "#c4c4c4", "#525252"];
+export const MONO_SEQ = ["#0a0a0a", "#525252", "#a3a3a3", "#262626", "#737373", "#d4d4d4"];
+
+const MONO_FONT = "Space Mono, monospace";
+const SANS_FONT = "Public Sans, sans-serif";
 
 export const baseAxis = {
-  axisLine: { lineStyle: { color: MONO.line } },
-  axisTick: { lineStyle: { color: MONO.line } },
-  axisLabel: { color: MONO.muted, fontFamily: "Public Sans, sans-serif", fontSize: 11 },
-  splitLine: { lineStyle: { color: MONO.line } },
+  axisLine: { lineStyle: { color: MONO.ink, width: 2 } },
+  axisTick: { lineStyle: { color: MONO.ink } },
+  axisLabel: { color: MONO.ink, fontFamily: SANS_FONT, fontSize: 11, fontWeight: 600 },
+  splitLine: { lineStyle: { color: "#e5e5e5" } },
 };
 
-export const baseGrid = { left: 8, right: 16, top: 36, bottom: 8, containLabel: true };
+export const baseGrid = { left: 8, right: 16, top: 24, bottom: 8, containLabel: true };
 
-export const baseTextStyle = { fontFamily: "Public Sans, sans-serif", color: MONO.ink };
+export const baseTextStyle = { fontFamily: SANS_FONT, color: MONO.ink };
 
 export const baseTooltip = {
-  backgroundColor: "#ffffff",
-  borderColor: MONO.line,
-  borderWidth: 1,
-  textStyle: { color: MONO.ink, fontFamily: "Public Sans, sans-serif", fontSize: 12 },
+  backgroundColor: "#0a0a0a",
+  borderColor: "#0a0a0a",
+  borderWidth: 0,
+  padding: [8, 12],
+  textStyle: { color: "#ffffff", fontFamily: MONO_FONT, fontSize: 12 },
 };

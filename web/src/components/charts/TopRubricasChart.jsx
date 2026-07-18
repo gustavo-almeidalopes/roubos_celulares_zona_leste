@@ -22,7 +22,7 @@ export default function TopRubricasChart({ data, topN = 15 }) {
       {
         type: "bar",
         data: rows.map((r) => Number(r.occurrences)),
-        itemStyle: { color: MONO.ink, borderRadius: [0, 4, 4, 0] },
+        itemStyle: { color: MONO.ink },
         label: { show: true, position: "right", color: MONO.ink, fontSize: 11 },
       },
     ],

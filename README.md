@@ -45,6 +45,7 @@ Os dados utilizados são provenientes exclusivamente de fontes oficiais do Gover
 |---|---|---|
 | **SSP-SP** | Consulta de Boletins de Ocorrência de celulares subtraídos (furtos e roubos) | [ssp.sp.gov.br/estatistica/dados-mensais](https://www.ssp.sp.gov.br/estatistica/consultas) |
 | **SSP-SP — Transparência** | Portal de dados abertos de segurança pública | [transparencia.ssp.sp.gov.br](https://www.ssp.sp.gov.br/) |
+| **Distritos SP (GeoJSON)** | Perímetros dos distritos administrativos do município de SP — usados no mapa da Zona Leste (simplificados via mapshaper) | [codigourbano/distritos-sp](https://github.com/codigourbano/distritos-sp) |
 
 > Os dados são de domínio público e utilizados exclusivamente para fins analíticos e educacionais, sem qualquer fins comerciais.
 
@@ -118,23 +119,37 @@ Exibidos no topo do dashboard, recalculados dinamicamente a cada mudança de fil
 | 5 | **YoY: Furtos vs Roubos** | Barras agrupadas | Comparativo ano a ano entre as duas principais categorias criminais |
 | 6 | **Heatmap Dia × Período** | Heatmap (YlOrRd) | Concentração de ocorrências por dia da semana cruzado com período do dia (`DESCR_PERIODO`) |
 | 7 | **Mapa de Incidentes** | Scatter Mapbox | Amostra georreferenciada de até 5.000 registros; cor por tipo de crime; basemap Carto |
-| 8 | **Bairros da Zona Leste** | Mapa de bolhas (Leaflet) | Ocorrências agregadas por bairro/distrito da Zona Leste sobre tiles OpenStreetMap; centróide geocodificado, raio/cor por volume, tooltip + popup com furtos/roubos — *só no dashboard React* |
+| 8 | **Mapa da Zona Leste** | Coroplético (ECharts, vetorial) | Os **33 distritos oficiais** da Zona Leste desenhados a partir de GeoJSON, pintados em escala de cinza por volume de ocorrências; clique num distrito para filtrar todo o painel; tooltip com furtos/roubos. Estilo **brutalista** — *só no dashboard React* |
 
 ### Seções Expansíveis
 
 - **Preview dos dados brutos** — tabela com as primeiras 200 linhas do resultado filtrado
 - **Download CSV filtrado** — exportação completa dos dados com os filtros ativos, delimitada por `;`
 
-### Filtros da Sidebar
+### Filtros (dashboard React)
+
+O dashboard React organiza os filtros em dois grupos, no estilo brutalista:
+
+**Principais** — painel fixo no canto superior esquerdo, sobre o mapa:
 
 | Filtro | Tipo | Comportamento padrão |
 |---|---|---|
-| **Ano** | Multiselect | Seleciona os 3 anos mais recentes |
-| **Mês** | Multiselect | Todos os 12 meses selecionados |
-| **Delegacia (Precinct)** | Multiselect | Nenhuma (= todas as delegacias) |
-| **Município** | Multiselect | Nenhum (= todos os municípios) |
+| **Ano** | Multiselect (pills) | Seleciona os 3 anos mais recentes |
+| **Mês** | Multiselect (pills) | Todos os meses |
+| **Bairro / Distrito** | Dropdown | Todos os 33 distritos (também setado ao clicar no mapa) |
 
-Todos os valores dos filtros são carregados com `DISTINCT` direto do DuckDB e cacheados por 1 hora (`@st.cache_data(ttl=3600)`).
+**"+ Filtros"** — botão fixo na base da página que abre um painel para cima:
+
+| Filtro | Tipo | Comportamento padrão |
+|---|---|---|
+| **Categoria** | Pills (Furto / Roubo / Outros) | Nenhuma (= todas) |
+| **Tipo de roubo / rubrica** | Busca livre | Vazio |
+| **Delegacia (DP)** | Dropdown | Todas as delegacias |
+
+> Todo o dashboard é escopado à Zona Leste pela VIEW `crimes_zl` (DuckDB-WASM), que junta os
+> ~1,5 mil valores de texto livre de `BAIRRO` aos 33 distritos oficiais via uma tabela de mapeamento
+> construída no cliente. O mapa ignora o filtro de bairro (mostra sempre todos os distritos) e usa a
+> seleção apenas para realçar; KPIs e gráficos respeitam todos os filtros.
 
 ---
 
@@ -367,7 +382,7 @@ vercel --prod   # na raiz do repositório; o vercel.json cuida do resto
 | [Tailwind CSS](https://tailwindcss.com/) v4 | Estilização utility-first, tema monocromático |
 | [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview) | Motor SQL rodando no navegador — lê o Parquet direto via `fetch`, sem backend |
 | [ECharts](https://echarts.apache.org/) (`echarts-for-react`) | Gráficos interativos (barra, linha, donut) |
-| [Leaflet](https://leafletjs.com/) (`react-leaflet`) | Mapa interativo dos bairros da Zona Leste — tiles OpenStreetMap, sem chave de API |
+| [ECharts](https://echarts.apache.org/) — série `map` | Mapa coroplético dos 33 distritos da Zona Leste via GeoJSON (`registerMap`); vetorial, sem tiles nem chave de API — funciona 100% offline |
 | [Anime.js](https://animejs.com/) | Animações de entrada (header, KPI cards, gráficos) |
 
 > **Legado:** o app Streamlit (`src/app.py`, `streamlit` + `plotly`) permanece no repositório e
@@ -402,7 +417,7 @@ O módulo [`src/data_pipeline/clean.py`](src/data_pipeline/clean.py) aplica as s
 - [ ] Benchmarking de chunk sizes maiores (100k, 200k) para máquinas com +16 GB de RAM
 
 ### 🗺️ Expansão Geográfica
-- [x] Mapa interativo dos bairros da Zona Leste (Leaflet, bolhas por centróide geocodificado)
+- [x] Mapa coroplético dos 33 distritos oficiais da Zona Leste (ECharts + GeoJSON), com redesign brutalista em escala de cinza e clique-para-filtrar
 - [ ] Ampliar a cobertura para **todas as regiões do Estado de São Paulo** (demais zonas da capital + interior)
 - [ ] Adicionar filtro por Seccional e Departamento policial
 - [ ] Implementar drill-down geográfico: Estado → Município → Bairro

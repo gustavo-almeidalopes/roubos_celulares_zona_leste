@@ -1,15 +1,13 @@
 export default function MetricCard({ label, value, delta, help }) {
   return (
-    <div
-      className="card p-4"
-      data-animate="metric-card"
-      title={help}
-    >
-      <div className="text-[0.68rem] uppercase tracking-[0.05em] font-semibold text-muted">
-        {label}
-      </div>
-      <div className="text-[1.7rem] font-bold text-ink mt-1">{value}</div>
-      {delta ? <div className="text-xs text-muted mt-1">{delta}</div> : null}
+    <div className="brutal-card-sm p-3" data-animate="metric-card" title={help}>
+      <div className="brutal-label">{label}</div>
+      <div className="brutal-num text-[1.8rem] leading-none text-ink mt-2">{value}</div>
+      {delta ? (
+        <div className="mt-2 inline-block border-2 border-ink bg-ink text-paper text-[0.62rem] font-bold uppercase tracking-wide px-1.5 py-0.5">
+          {delta}
+        </div>
+      ) : null}
     </div>
   );
 }
