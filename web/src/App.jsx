@@ -5,6 +5,7 @@ import TopRubricasChart from "./components/charts/TopRubricasChart";
 import MonthlyTrendChart from "./components/charts/MonthlyTrendChart";
 import CategoryDonutChart from "./components/charts/CategoryDonutChart";
 import YoyChart from "./components/charts/YoyChart";
+import ZonaLesteMap from "./components/charts/ZonaLesteMap";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useEntranceAnimation } from "./hooks/useEntranceAnimation";
 
@@ -21,6 +22,7 @@ export default function App() {
     monthlyTrend,
     categoryBreakdown,
     yoyComparison,
+    zonaLesteBairros,
   } = useDashboardData();
 
   useEntranceAnimation(status === "ready");
@@ -54,6 +56,8 @@ export default function App() {
 
         <div className="space-y-6 min-w-0">
           <MetricsRow metrics={metrics} />
+
+          <ZonaLesteMap data={zonaLesteBairros} />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <TopRubricasChart data={topRubricas} />

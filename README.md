@@ -118,6 +118,7 @@ Exibidos no topo do dashboard, recalculados dinamicamente a cada mudança de fil
 | 5 | **YoY: Furtos vs Roubos** | Barras agrupadas | Comparativo ano a ano entre as duas principais categorias criminais |
 | 6 | **Heatmap Dia × Período** | Heatmap (YlOrRd) | Concentração de ocorrências por dia da semana cruzado com período do dia (`DESCR_PERIODO`) |
 | 7 | **Mapa de Incidentes** | Scatter Mapbox | Amostra georreferenciada de até 5.000 registros; cor por tipo de crime; basemap Carto |
+| 8 | **Bairros da Zona Leste** | Mapa de bolhas (Leaflet) | Ocorrências agregadas por bairro/distrito da Zona Leste sobre tiles OpenStreetMap; centróide geocodificado, raio/cor por volume, tooltip + popup com furtos/roubos — *só no dashboard React* |
 
 ### Seções Expansíveis
 
@@ -366,6 +367,7 @@ vercel --prod   # na raiz do repositório; o vercel.json cuida do resto
 | [Tailwind CSS](https://tailwindcss.com/) v4 | Estilização utility-first, tema monocromático |
 | [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview) | Motor SQL rodando no navegador — lê o Parquet direto via `fetch`, sem backend |
 | [ECharts](https://echarts.apache.org/) (`echarts-for-react`) | Gráficos interativos (barra, linha, donut) |
+| [Leaflet](https://leafletjs.com/) (`react-leaflet`) | Mapa interativo dos bairros da Zona Leste — tiles OpenStreetMap, sem chave de API |
 | [Anime.js](https://animejs.com/) | Animações de entrada (header, KPI cards, gráficos) |
 
 > **Legado:** o app Streamlit (`src/app.py`, `streamlit` + `plotly`) permanece no repositório e
@@ -400,6 +402,7 @@ O módulo [`src/data_pipeline/clean.py`](src/data_pipeline/clean.py) aplica as s
 - [ ] Benchmarking de chunk sizes maiores (100k, 200k) para máquinas com +16 GB de RAM
 
 ### 🗺️ Expansão Geográfica
+- [x] Mapa interativo dos bairros da Zona Leste (Leaflet, bolhas por centróide geocodificado)
 - [ ] Ampliar a cobertura para **todas as regiões do Estado de São Paulo** (demais zonas da capital + interior)
 - [ ] Adicionar filtro por Seccional e Departamento policial
 - [ ] Implementar drill-down geográfico: Estado → Município → Bairro

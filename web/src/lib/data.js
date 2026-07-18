@@ -3,6 +3,7 @@
  * / charts.py para JS. Todas as funções rodam sobre a VIEW `crimes` (DuckDB-WASM).
  */
 import { runQuery } from "./duckdb";
+import { aggregateZonaLeste } from "./zonaLeste";
 
 export const MONTH_LABELS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -129,6 +130,25 @@ export async function fetchCategoryBreakdown(where) {
     GROUP BY category
     ORDER BY occurrences DESC
   `);
+}
+
+/** Ocorrências por bairro da Zona Leste (centróide geocodificado + furtos/roubos) — para o mapa. */
+export async function fetchZonaLesteBairros(where) {
+  const extra = where ? "AND" : "WHERE";
+  const rows = await runQuery(`
+    SELECT
+      BAIRRO,
+      COUNT(*) AS total,
+      COALESCE(SUM(CASE WHEN RUBRICA LIKE 'FURTO%' THEN 1 END), 0) AS furtos,
+      COALESCE(SUM(CASE WHEN RUBRICA LIKE 'ROUBO%' THEN 1 END), 0) AS roubos,
+      COALESCE(SUM(LATITUDE), 0) AS lat_sum,
+      COALESCE(SUM(LONGITUDE), 0) AS lon_sum,
+      COUNT(LATITUDE) AS geocoded
+    FROM crimes ${where}
+    ${extra} BAIRRO IS NOT NULL
+    GROUP BY BAIRRO
+  `);
+  return aggregateZonaLeste(rows);
 }
 
 /** Furtos vs Roubos por ano — para o gráfico YoY. */

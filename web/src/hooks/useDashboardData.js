@@ -7,6 +7,7 @@ import {
   fetchMonthlyTrend,
   fetchTopRubricas,
   fetchYoyComparison,
+  fetchZonaLesteBairros,
 } from "../lib/data";
 
 const DEFAULT_FILTERS = {
@@ -31,6 +32,7 @@ export function useDashboardData() {
   const [monthlyTrend, setMonthlyTrend] = useState([]);
   const [categoryBreakdown, setCategoryBreakdown] = useState([]);
   const [yoyComparison, setYoyComparison] = useState([]);
+  const [zonaLesteBairros, setZonaLesteBairros] = useState([]);
 
   const where = useMemo(() => buildWhereClause(filters), [filters]);
 
@@ -62,12 +64,13 @@ export function useDashboardData() {
     setStatus((s) => (s === "error" ? s : "loading"));
     (async () => {
       try {
-        const [m, top, trend, cat, yoy] = await Promise.all([
+        const [m, top, trend, cat, yoy, bairros] = await Promise.all([
           fetchMetrics(where),
           fetchTopRubricas(where),
           fetchMonthlyTrend(where),
           fetchCategoryBreakdown(where),
           fetchYoyComparison(where),
+          fetchZonaLesteBairros(where),
         ]);
         if (cancelled) return;
         setMetrics(m);
@@ -75,6 +78,7 @@ export function useDashboardData() {
         setMonthlyTrend(trend);
         setCategoryBreakdown(cat);
         setYoyComparison(yoy);
+        setZonaLesteBairros(bairros);
         setStatus("ready");
       } catch (err) {
         if (!cancelled) {
@@ -101,5 +105,6 @@ export function useDashboardData() {
     monthlyTrend,
     categoryBreakdown,
     yoyComparison,
+    zonaLesteBairros,
   };
 }
