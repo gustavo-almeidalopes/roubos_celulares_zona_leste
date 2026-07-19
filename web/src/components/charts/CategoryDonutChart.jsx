@@ -16,7 +16,7 @@ export default function CategoryDonutChart({ data }) {
         type: "pie",
         radius: ["58%", "82%"],
         avoidLabelOverlap: true,
-        itemStyle: { borderColor: "#fff", borderWidth: 2 },
+        itemStyle: { borderColor: "#1e1e1e", borderWidth: 2 },
         label: { formatter: "{b}\n{d}%", color: MONO.ink, fontSize: 12, fontWeight: 600 },
         data: (data ?? []).map((r) => ({
           name: r.category,

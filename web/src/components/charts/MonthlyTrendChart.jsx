@@ -1,6 +1,6 @@
 import ReactECharts from "echarts-for-react";
 import ChartCard from "./ChartCard";
-import { MONO_SEQ, baseAxis, baseGrid, baseTextStyle, baseTooltip } from "../../lib/echartsTheme";
+import { MONO_SEQ, baseAxis, baseGrid, baseLegend, baseTextStyle, baseTooltip } from "../../lib/echartsTheme";
 import { MONTH_LABELS } from "../../lib/data";
 
 const DASHES = ["solid", "dashed", "dotted"];
@@ -22,7 +22,7 @@ export default function MonthlyTrendChart({ data }) {
   const option = {
     textStyle: baseTextStyle,
     tooltip: { ...baseTooltip, trigger: "axis" },
-    legend: { top: 0, right: 0, textStyle: { color: "#1a1a1a", fontSize: 11 } },
+    legend: baseLegend,
     grid: baseGrid,
     xAxis: { type: "category", data: MONTH_LABELS, ...baseAxis },
     yAxis: { type: "value", ...baseAxis },

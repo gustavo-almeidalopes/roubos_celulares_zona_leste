@@ -119,7 +119,7 @@ Exibidos no topo do dashboard, recalculados dinamicamente a cada mudança de fil
 | 5 | **YoY: Furtos vs Roubos** | Barras agrupadas | Comparativo ano a ano entre as duas principais categorias criminais |
 | 6 | **Heatmap Dia × Período** | Heatmap (YlOrRd) | Concentração de ocorrências por dia da semana cruzado com período do dia (`DESCR_PERIODO`) |
 | 7 | **Mapa de Incidentes** | Scatter Mapbox | Amostra georreferenciada de até 5.000 registros; cor por tipo de crime; basemap Carto |
-| 8 | **Mapa da Zona Leste** | Coroplético (ECharts, vetorial) | Os **33 distritos oficiais** da Zona Leste desenhados a partir de GeoJSON, pintados em escala de cinza por volume de ocorrências; clique num distrito para filtrar todo o painel; tooltip com furtos/roubos. Estilo **brutalista** — *só no dashboard React* |
+| 8 | **Mapa da Zona Leste** | Coroplético (ECharts, vetorial) | Os **33 distritos oficiais** da Zona Leste desenhados a partir de GeoJSON — em repouso, perímetro + nome com preenchimento monocromático sutil (mais claro = mais ocorrências). Detalhe sob demanda (*progressive disclosure*): hover com ~150ms de delay abre um card com ordem fixa de métricas (Roubos → Furtos → Total), seta + variação colorida discreta e baseline temporal explícito ("2025 vs. 2024"); clique/tap fixa o card e filtra todo o painel — *só no dashboard React* |
 
 ### Seções Expansíveis
 
@@ -128,23 +128,30 @@ Exibidos no topo do dashboard, recalculados dinamicamente a cada mudança de fil
 
 ### Filtros (dashboard React)
 
-O dashboard React organiza os filtros em dois grupos, no estilo brutalista:
+O dashboard React organiza os filtros num **painel lateral esquerdo recolhível**
+(drawer no mobile), com *progressive disclosure* em dois níveis:
 
-**Principais** — painel fixo no canto superior esquerdo, sobre o mapa:
-
-| Filtro | Tipo | Comportamento padrão |
-|---|---|---|
-| **Ano** | Multiselect (pills) | Seleciona os 3 anos mais recentes |
-| **Mês** | Multiselect (pills) | Todos os meses |
-| **Bairro / Distrito** | Dropdown | Todos os 33 distritos (também setado ao clicar no mapa) |
-
-**"+ Filtros"** — botão fixo na base da página que abre um painel para cima:
+**Filtros básicos** — sempre à vista no painel:
 
 | Filtro | Tipo | Comportamento padrão |
 |---|---|---|
-| **Categoria** | Pills (Furto / Roubo / Outros) | Nenhuma (= todas) |
+| **Ano** | Multiselect (chips) | Seleciona os 3 anos mais recentes |
+| **Mês** | Multiselect (chips) | Todos os meses |
+| **Tipo de ocorrência** | Chips (Furto / Roubo / Outros) | Nenhuma (= todas) |
+| **Período do dia** | Chips (Manhã / Tarde / Noite / Madrugada) | Nenhum (= todos; derivado de `HORA_OCORRENCIA`) |
+
+**"Mais filtros"** — botão na base do painel que expande os avançados:
+
+| Filtro | Tipo | Comportamento padrão |
+|---|---|---|
+| **Distrito** | Dropdown | Todos os 33 distritos (também setado ao clicar no mapa) |
 | **Tipo de roubo / rubrica** | Busca livre | Vazio |
 | **Delegacia (DP)** | Dropdown | Todas as delegacias |
+
+Chips de **"Filtros ativos"** mostram tudo o que está aplicado (com remoção
+individual e "Limpar tudo"), e uma **faixa de KPIs sempre visível** (total +
+variação com baseline explícito, roubos, furtos, distrito líder) acompanha o
+alternador de visão **Mapa / Gráficos**.
 
 > Todo o dashboard é escopado à Zona Leste pela VIEW `crimes_zl` (DuckDB-WASM), que junta os
 > ~1,5 mil valores de texto livre de `BAIRRO` aos 33 distritos oficiais via uma tabela de mapeamento
@@ -417,7 +424,7 @@ O módulo [`src/data_pipeline/clean.py`](src/data_pipeline/clean.py) aplica as s
 - [ ] Benchmarking de chunk sizes maiores (100k, 200k) para máquinas com +16 GB de RAM
 
 ### 🗺️ Expansão Geográfica
-- [x] Mapa coroplético dos 33 distritos oficiais da Zona Leste (ECharts + GeoJSON), com redesign brutalista em escala de cinza e clique-para-filtrar
+- [x] Mapa coroplético dos 33 distritos oficiais da Zona Leste (ECharts + GeoJSON), com preenchimento monocromático sutil, card de detalhe sob demanda (hover/tap) e clique-para-filtrar
 - [ ] Ampliar a cobertura para **todas as regiões do Estado de São Paulo** (demais zonas da capital + interior)
 - [ ] Adicionar filtro por Seccional e Departamento policial
 - [ ] Implementar drill-down geográfico: Estado → Município → Bairro
@@ -439,8 +446,10 @@ O módulo [`src/data_pipeline/clean.py`](src/data_pipeline/clean.py) aplica as s
 ### 🎨 Aparência e Acessibilidade
 - [x] Redesign minimalista monocromático (preto & branco) com tema customizado no Streamlit
 - [x] Melhor contraste e tamanho de fonte para acessibilidade + foco visível (rumo a WCAG 2.1 AA)
-- [x] Layout responsivo (desktop + mobile)
-- [ ] Implementar modo escuro (dark mode)
+- [x] Layout responsivo (desktop + mobile — filtros viram drawer no celular)
+- [x] Modo escuro: tema mono escuro no dashboard React (contraste AA, acentos de cor só nos números de variação)
+- [x] Skeleton do layout na primeira carga (DuckDB-WASM não é instantâneo) em vez de spinner solto
+- [x] `prefers-reduced-motion` respeitado nas animações de entrada
 - [ ] Adicionar tooltips explicativos em cada gráfico (KPI cards já têm `help`)
 - [ ] Adicionar suporte a português para todos os rótulos do dashboard (atualmente em inglês)
 - [ ] Incluir seção "Como ler este dashboard" para usuários não-técnicos

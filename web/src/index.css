@@ -1,34 +1,43 @@
 @import "tailwindcss";
 
 /* ============================================================
-   TEMA BRUTALISTA — escala de cinza, quadrado, sombras pesadas
+   TEMA MONO ESCURO — Radar Segurança SP
+   Escala de cinza neutra, cantos arredondados, bordas sutis.
+   Cor (vermelho/verde discretos) reservada APENAS para números
+   de variação — a identidade continua monocromática.
+   Todos os pares texto/fundo abaixo cumprem WCAG AA.
    ============================================================ */
 @theme {
   --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "Space Mono", "IBM Plex Mono", ui-monospace, monospace;
 
-  /* Escala de cinza */
-  --color-paper: #ffffff;
-  --color-bg: #d9d9d9;
-  --color-ink: #0a0a0a;
-  --color-g950: #0a0a0a;
-  --color-g900: #171717;
-  --color-g800: #262626;
-  --color-g700: #404040;
-  --color-g600: #525252;
-  --color-g500: #737373;
-  --color-g400: #a3a3a3;
-  --color-g300: #d4d4d4;
-  --color-g200: #e5e5e5;
-  --color-g100: #f5f5f5;
+  /* Superfícies (do fundo para o primeiro plano) */
+  --color-bg: #121212;
+  --color-panel: #1a1a1a;
+  --color-card: #1e1e1e;
+  --color-raised: #262626;
+  --color-hover: #2e2e2e;
 
-  /* Sombras duras (offset sólido, sem blur) */
-  --shadow-brutal: 6px 6px 0 0 #0a0a0a;
-  --shadow-brutal-sm: 4px 4px 0 0 #0a0a0a;
-  --shadow-brutal-lg: 10px 10px 0 0 #0a0a0a;
+  /* Bordas */
+  --color-border: #2e2e2e;
+  --color-border-strong: #454545;
 
-  /* Zero arredondamento — tudo quadrado */
-  --radius-none: 0px;
+  /* Texto (contraste AA sobre panel/card) */
+  --color-ink: #f2f2f2;
+  --color-text: #e5e5e5;
+  --color-muted: #a8a8a8;
+  --color-faint: #8c8c8c;
+
+  /* Únicos acentos cromáticos permitidos: números de variação */
+  --color-delta-up: #f0888a;   /* piora (↑) — vermelho discreto */
+  --color-delta-down: #7fd8a2; /* melhora (↓) — verde discreto */
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+html {
+  background-color: var(--color-bg); /* evita flash claro antes do CSS */
 }
 
 html,
@@ -39,114 +48,277 @@ body,
 
 body {
   background-color: var(--color-bg);
-  color: var(--color-ink);
+  color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  /* textura sutil de "grid" concreto */
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-*,
-*::before,
-*::after {
-  border-radius: 0 !important; /* brutalismo: nada arredondado */
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-ink);
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Componentes na layer `components` → utilitários do Tailwind (bg-ink,
-   text-paper, etc.) sempre vencem, permitindo sobrescrever caso a caso. */
 @layer components {
-  /* ---- Blocos base ---- */
-  .brutal-card {
-    background: var(--color-paper);
-    border: 3px solid var(--color-ink);
-    box-shadow: var(--shadow-brutal);
+  /* ---- Superfícies ---- */
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
   }
 
-  .brutal-card-sm {
-    background: var(--color-paper);
-    border: 3px solid var(--color-ink);
-    box-shadow: var(--shadow-brutal-sm);
-  }
-
-  /* ---- Botões ---- */
-  .brutal-btn {
+  /* ---- Chips de filtro (toggle) ---- */
+  .chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    border: 3px solid var(--color-ink);
-    background: var(--color-paper);
-    color: var(--color-ink);
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    box-shadow: var(--shadow-brutal-sm);
-    transition: transform 80ms steps(2), box-shadow 80ms steps(2), background 80ms;
+    gap: 0.3rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.32rem 0.7rem;
     cursor: pointer;
     user-select: none;
+    transition: background 120ms, color 120ms, border-color 120ms;
   }
-  .brutal-btn:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 5px 5px 0 0 #0a0a0a;
+  .chip:hover {
+    background: var(--color-hover);
   }
-  .brutal-btn:active {
-    transform: translate(4px, 4px);
-    box-shadow: 0 0 0 0 #0a0a0a;
-  }
-  .brutal-btn[data-active="true"] {
+  .chip[data-active="true"] {
     background: var(--color-ink);
-    color: var(--color-paper);
+    border-color: var(--color-ink);
+    color: #121212;
+  }
+
+  /* ---- Chip de filtro ATIVO (resumo com ×) ---- */
+  .active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 999px;
+    background: var(--color-raised);
+    color: var(--color-text);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.25rem 0.35rem 0.25rem 0.6rem;
+  }
+  .active-chip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    color: var(--color-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+  .active-chip button:hover {
+    background: var(--color-hover);
+    color: var(--color-ink);
+  }
+
+  /* ---- Botões ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 120ms, color 120ms, border-color 120ms;
+  }
+  .btn:hover {
+    background: var(--color-hover);
+  }
+  .btn[data-active="true"] {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: #121212;
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    color: var(--color-muted);
+  }
+  .btn-ghost:hover {
+    color: var(--color-ink);
+    background: var(--color-hover);
   }
 
   /* ---- Inputs / selects ---- */
-  .brutal-input {
+  .input {
     width: 100%;
-    border: 3px solid var(--color-ink);
-    background: var(--color-paper);
-    color: var(--color-ink);
-    font-weight: 600;
-    padding: 0.5rem 0.6rem;
-    box-shadow: inset 2px 2px 0 0 rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    background: var(--color-panel);
+    color: var(--color-text);
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.5rem 0.65rem;
   }
-  .brutal-input:focus {
+  .input::placeholder {
+    color: var(--color-faint);
+  }
+  .input:focus {
     outline: none;
-    box-shadow: var(--shadow-brutal-sm);
+    border-color: var(--color-ink);
+  }
+  select.input option {
+    background: var(--color-panel);
+    color: var(--color-text);
   }
 
-  /* ---- Rótulos ---- */
-  .brutal-label {
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+  /* ---- Rótulos de seção de filtro ---- */
+  .filter-label {
     font-size: 0.66rem;
-    color: var(--color-g700);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--color-muted);
   }
 
-  /* números grandes em mono para o ar "terminal/dados" */
-  .brutal-num {
+  /* números em mono para o ar "dados" */
+  .num {
     font-family: var(--font-mono);
     font-weight: 700;
     letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Skeleton (estado de carregamento) ---- */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-raised);
+    border-radius: 10px;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    animation: skeleton-sweep 1.4s infinite;
+  }
+  @keyframes skeleton-sweep {
+    100% {
+      transform: translateX(100%);
+    }
   }
 }
 
-/* scrollbar quadrada */
+/* ============================================================
+   Card de distrito (tooltip do mapa + card fixado)
+   Uma única estrutura/classe para o hover e o pin, garantindo
+   ordem fixa e escaneável das métricas: Roubos → Furtos → Total.
+   ============================================================ */
+.district-card {
+  min-width: 216px;
+  font-family: var(--font-sans);
+}
+.district-card .dc-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+.district-card .dc-baseline {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+.district-card .dc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 0.78rem;
+}
+.district-card .dc-row + .dc-row {
+  border-top: 1px solid var(--color-border);
+}
+.district-card .dc-metric {
+  color: var(--color-muted);
+  font-weight: 600;
+  width: 58px;
+  flex: none;
+}
+.district-card .dc-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.district-card .dc-delta {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: 62px;
+  flex: none;
+  text-align: right;
+  color: var(--color-faint); /* neutro (0% ou sem base) */
+  font-variant-numeric: tabular-nums;
+}
+.district-card .dc-delta[data-dir="up"] {
+  color: var(--color-delta-up);
+}
+.district-card .dc-delta[data-dir="down"] {
+  color: var(--color-delta-down);
+}
+.district-card .dc-hint {
+  font-size: 0.62rem;
+  color: var(--color-faint);
+  margin-top: 8px;
+}
+
+/* variação nos KPIs reutiliza a mesma convenção seta+cor */
+.delta[data-dir="up"] {
+  color: var(--color-delta-up);
+}
+.delta[data-dir="down"] {
+  color: var(--color-delta-down);
+}
+.delta[data-dir="flat"] {
+  color: var(--color-faint);
+}
+
+/* scrollbar discreta */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-ink);
-  border: 3px solid var(--color-bg);
+  background: var(--color-border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--color-bg);
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-g300);
+  background: transparent;
+}
+
+/* acessibilidade: respeita quem desativa animações no SO */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

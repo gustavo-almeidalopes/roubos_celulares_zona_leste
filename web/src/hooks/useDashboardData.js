@@ -4,7 +4,7 @@ import {
   fetchCategoryBreakdown,
   fetchDistinctDelegacias,
   fetchDistinctYears,
-  fetchDistritoTotals,
+  fetchDistritoStats,
   fetchMetrics,
   fetchMonthlyTrend,
   fetchTopRubricas,
@@ -14,6 +14,7 @@ import {
 const DEFAULT_FILTERS = {
   years: [],
   months: [],
+  dayPeriods: [],
   bairro: null,
   categories: [],
   rubrica: "",
@@ -26,6 +27,10 @@ const DEFAULT_FILTERS = {
  *
  * O mapa ignora o filtro de bairro (mostra sempre os 33 distritos) e usa a
  * seleção só para realçar; KPIs e gráficos respeitam todos os filtros.
+ *
+ * Baseline temporal explícito: toda variação YoY compara `lastYear` (ano mais
+ * recente do recorte) contra `prevYear` (ano anterior), calculada sem o filtro
+ * de anos — assim o ano-base sempre existe e o card pode dizer "X vs Y".
  */
 export function useDashboardData() {
   const [availableYears, setAvailableYears] = useState([]);
@@ -39,11 +44,24 @@ export function useDashboardData() {
   const [monthlyTrend, setMonthlyTrend] = useState([]);
   const [categoryBreakdown, setCategoryBreakdown] = useState([]);
   const [yoyComparison, setYoyComparison] = useState([]);
-  const [distritoTotals, setDistritoTotals] = useState([]);
+  const [distritoStats, setDistritoStats] = useState([]);
+
+  // Ano de referência da variação: o mais recente do recorte (ou dos dados).
+  const lastYear = useMemo(() => {
+    if (filters.years.length) return Math.max(...filters.years.map(Number));
+    return availableYears.length ? availableYears[0] : null;
+  }, [filters.years, availableYears]);
+  const prevYear = lastYear != null ? lastYear - 1 : null;
 
   const whereAll = useMemo(() => buildWhereClause(filters), [filters]);
   // O mapa mostra todos os distritos: ignora o filtro de bairro.
   const whereMap = useMemo(() => buildWhereClause({ ...filters, bairro: null }), [filters]);
+  // Comparações YoY: sem o recorte de anos (o ano-base precisa existir).
+  const whereCompareAll = useMemo(() => buildWhereClause({ ...filters, years: [] }), [filters]);
+  const whereCompareMap = useMemo(
+    () => buildWhereClause({ ...filters, years: [], bairro: null }),
+    [filters]
+  );
 
   // Bootstrap: anos + DPs disponíveis; default = 3 anos mais recentes.
   useEffect(() => {
@@ -75,12 +93,12 @@ export function useDashboardData() {
     (async () => {
       try {
         const [m, top, trend, cat, yoy, distritos] = await Promise.all([
-          fetchMetrics(whereAll),
+          fetchMetrics(whereAll, whereCompareAll, lastYear, prevYear),
           fetchTopRubricas(whereAll),
           fetchMonthlyTrend(whereAll),
           fetchCategoryBreakdown(whereAll),
           fetchYoyComparison(whereAll),
-          fetchDistritoTotals(whereMap),
+          fetchDistritoStats(whereMap, whereCompareMap, lastYear, prevYear),
         ]);
         if (cancelled) return;
         setMetrics(m);
@@ -88,7 +106,7 @@ export function useDashboardData() {
         setMonthlyTrend(trend);
         setCategoryBreakdown(cat);
         setYoyComparison(yoy);
-        setDistritoTotals(distritos);
+        setDistritoStats(distritos);
         setStatus("ready");
       } catch (err) {
         if (!cancelled) {
@@ -101,7 +119,7 @@ export function useDashboardData() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [whereAll, whereMap, availableYears.length]);
+  }, [whereAll, whereMap, whereCompareAll, whereCompareMap, lastYear, availableYears.length]);
 
   return {
     availableYears,
@@ -116,6 +134,8 @@ export function useDashboardData() {
     monthlyTrend,
     categoryBreakdown,
     yoyComparison,
-    distritoTotals,
+    distritoStats,
+    lastYear,
+    prevYear,
   };
 }

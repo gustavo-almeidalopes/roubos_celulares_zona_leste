@@ -11,6 +11,19 @@ export const MONTH_LABELS = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
 
+/**
+ * Períodos do dia, derivados de HORA_OCORRENCIA ("HH:MM:SS").
+ * BOs sem hora ficam de fora quando o filtro está ativo.
+ */
+export const DAY_PERIODS = [
+  { id: "manha", label: "Manhã", hours: [6, 11] },
+  { id: "tarde", label: "Tarde", hours: [12, 17] },
+  { id: "noite", label: "Noite", hours: [18, 23] },
+  { id: "madrugada", label: "Madrugada", hours: [0, 5] },
+];
+
+const DAY_PERIOD_BY_ID = new Map(DAY_PERIODS.map((p) => [p.id, p]));
+
 const sqlStr = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
 function likeEscape(raw) {
@@ -31,6 +44,15 @@ function categoryClause(categories) {
   return parts.length ? `(${parts.join(" OR ")})` : null;
 }
 
+function dayPeriodClause(ids) {
+  const hour = "TRY_CAST(SUBSTRING(HORA_OCORRENCIA, 1, 2) AS INTEGER)";
+  const parts = ids
+    .map((id) => DAY_PERIOD_BY_ID.get(id))
+    .filter(Boolean)
+    .map(({ hours: [a, b] }) => `${hour} BETWEEN ${a} AND ${b}`);
+  return parts.length ? `(${parts.join(" OR ")})` : null;
+}
+
 /** Converte o estado de filtros do React em uma cláusula SQL `WHERE ...`. */
 export function buildWhereClause(filters) {
   const clauses = [];
@@ -40,6 +62,10 @@ export function buildWhereClause(filters) {
   }
   if (filters.months?.length) {
     clauses.push(`CAST(MES AS INTEGER) IN (${filters.months.map((m) => parseInt(m, 10)).join(", ")})`);
+  }
+  if (filters.dayPeriods?.length) {
+    const clause = dayPeriodClause(filters.dayPeriods);
+    if (clause) clauses.push(clause);
   }
   if (filters.bairro) {
     clauses.push(`DISTRITO = ${sqlStr(filters.bairro)}`);
@@ -78,35 +104,45 @@ export async function fetchDistinctDelegacias() {
   return rows.map((r) => r.dp);
 }
 
-/** KPIs agregados — total, furtos, roubos, delegacias, distritos, YoY. */
-export async function fetchMetrics(where) {
-  const lastYearRow = await runQuery(`SELECT MAX(CAST(ANO AS INTEGER)) AS y FROM crimes_zl ${where}`);
-  const lastYear = lastYearRow[0]?.y != null ? Number(lastYearRow[0].y) : null;
-  const prevYear = lastYear != null ? lastYear - 1 : null;
+const deltaPct = (curr, prev) => (prev > 0 ? ((curr - prev) / prev) * 100 : null);
 
+/**
+ * KPIs agregados — total, furtos, roubos, delegacias, distritos + variação
+ * YoY com baseline explícito: `lastYear` vs `prevYear`, calculada em
+ * `whereCompare` (mesmos filtros SEM o recorte de anos, senão o ano-base
+ * quase nunca estaria no recorte e a variação viraria ruído).
+ */
+export async function fetchMetrics(where, whereCompare, lastYear, prevYear) {
   const rows = await runQuery(`
     SELECT
       COUNT(*) AS total,
       COALESCE(SUM(CASE WHEN RUBRICA LIKE 'FURTO%' THEN 1 END), 0) AS furtos,
       COALESCE(SUM(CASE WHEN RUBRICA LIKE 'ROUBO%' THEN 1 END), 0) AS roubos,
       COUNT(DISTINCT NOME_DELEGACIA) AS delegacias,
-      COUNT(DISTINCT DISTRITO) AS distritos,
-      COALESCE(SUM(CASE WHEN CAST(ANO AS INTEGER) = ${lastYear ?? -1} THEN 1 END), 0) AS total_curr,
-      COALESCE(SUM(CASE WHEN CAST(ANO AS INTEGER) = ${prevYear ?? -1} THEN 1 END), 0) AS total_prev
+      COUNT(DISTINCT DISTRITO) AS distritos
     FROM crimes_zl ${where}
   `);
-  const m = rows[0] ?? {};
-  const total = Number(m.total ?? 0);
-  const totalCurr = Number(m.total_curr ?? 0);
-  const totalPrev = Number(m.total_prev ?? 0);
 
+  let yoyDeltaPct = null;
+  if (lastYear != null && prevYear != null) {
+    const glue = whereCompare ? `${whereCompare} AND` : "WHERE";
+    const cmp = await runQuery(`
+      SELECT
+        COALESCE(SUM(CASE WHEN CAST(ANO AS INTEGER) = ${lastYear} THEN 1 END), 0) AS total_curr,
+        COALESCE(SUM(CASE WHEN CAST(ANO AS INTEGER) = ${prevYear} THEN 1 END), 0) AS total_prev
+      FROM crimes_zl ${glue} CAST(ANO AS INTEGER) IN (${lastYear}, ${prevYear})
+    `);
+    yoyDeltaPct = deltaPct(Number(cmp[0]?.total_curr ?? 0), Number(cmp[0]?.total_prev ?? 0));
+  }
+
+  const m = rows[0] ?? {};
   return {
-    total,
+    total: Number(m.total ?? 0),
     furtos: Number(m.furtos ?? 0),
     roubos: Number(m.roubos ?? 0),
     delegacias: Number(m.delegacias ?? 0),
     distritos: Number(m.distritos ?? 0),
-    yoyDeltaPct: totalPrev > 0 ? ((totalCurr - totalPrev) / totalPrev) * 100 : null,
+    yoyDeltaPct,
     lastYear,
     prevYear,
   };
@@ -154,12 +190,15 @@ export async function fetchCategoryBreakdown(where) {
 }
 
 /**
- * Ocorrências por distrito da Zona Leste — para o mapa coroplético.
- * Retorna sempre os 33 distritos (preenchendo com zero os sem ocorrências
- * no recorte), com `name` = rótulo idêntico ao GeoJSON.
+ * Estatísticas por distrito para o mapa — totais do recorte atual + variação
+ * YoY (`lastYear` vs `prevYear`) por métrica, para o card de detalhe.
+ *
+ * `where` = filtros do mapa (sem bairro); `whereCompare` = idem SEM o recorte
+ * de anos, para o ano-base existir mesmo quando só um ano está selecionado.
+ * Retorna sempre os 33 distritos (zerando os sem ocorrências no recorte).
  */
-export async function fetchDistritoTotals(where) {
-  const rows = await runQuery(`
+export async function fetchDistritoStats(where, whereCompare, lastYear, prevYear) {
+  const totalsPromise = runQuery(`
     SELECT
       DISTRITO AS name,
       COUNT(*) AS total,
@@ -168,15 +207,43 @@ export async function fetchDistritoTotals(where) {
     FROM crimes_zl ${where}
     GROUP BY DISTRITO
   `);
-  const byName = new Map(rows.map((r) => [r.name, r]));
+
+  let comparePromise = Promise.resolve([]);
+  if (lastYear != null && prevYear != null) {
+    const glue = whereCompare ? `${whereCompare} AND` : "WHERE";
+    const ano = "CAST(ANO AS INTEGER)";
+    comparePromise = runQuery(`
+      SELECT
+        DISTRITO AS name,
+        SUM(CASE WHEN ${ano} = ${lastYear} THEN 1 ELSE 0 END) AS total_curr,
+        SUM(CASE WHEN ${ano} = ${prevYear} THEN 1 ELSE 0 END) AS total_prev,
+        SUM(CASE WHEN ${ano} = ${lastYear} AND RUBRICA LIKE 'ROUBO%' THEN 1 ELSE 0 END) AS roubos_curr,
+        SUM(CASE WHEN ${ano} = ${prevYear} AND RUBRICA LIKE 'ROUBO%' THEN 1 ELSE 0 END) AS roubos_prev,
+        SUM(CASE WHEN ${ano} = ${lastYear} AND RUBRICA LIKE 'FURTO%' THEN 1 ELSE 0 END) AS furtos_curr,
+        SUM(CASE WHEN ${ano} = ${prevYear} AND RUBRICA LIKE 'FURTO%' THEN 1 ELSE 0 END) AS furtos_prev
+      FROM crimes_zl ${glue} ${ano} IN (${lastYear}, ${prevYear})
+      GROUP BY DISTRITO
+    `);
+  }
+
+  const [totals, compare] = await Promise.all([totalsPromise, comparePromise]);
+  const totalsByName = new Map(totals.map((r) => [r.name, r]));
+  const compareByName = new Map(compare.map((r) => [r.name, r]));
+
   return Object.values(ZONA_LESTE_LABELS)
     .map((name) => {
-      const r = byName.get(name);
+      const t = totalsByName.get(name);
+      const c = compareByName.get(name);
       return {
         name,
-        total: Number(r?.total ?? 0),
-        furtos: Number(r?.furtos ?? 0),
-        roubos: Number(r?.roubos ?? 0),
+        total: Number(t?.total ?? 0),
+        furtos: Number(t?.furtos ?? 0),
+        roubos: Number(t?.roubos ?? 0),
+        deltas: {
+          total: c ? deltaPct(Number(c.total_curr), Number(c.total_prev)) : null,
+          roubos: c ? deltaPct(Number(c.roubos_curr), Number(c.roubos_prev)) : null,
+          furtos: c ? deltaPct(Number(c.furtos_curr), Number(c.furtos_prev)) : null,
+        },
       };
     })
     .sort((a, b) => b.total - a.total);
