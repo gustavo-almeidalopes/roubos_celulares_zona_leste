@@ -1,6 +1,6 @@
 import ReactECharts from "echarts-for-react";
 import ChartCard from "./ChartCard";
-import { MONO, baseAxis, baseGrid, baseTextStyle, baseTooltip } from "../../lib/echartsTheme";
+import { MONO, baseAxis, baseGrid, baseLegend, baseTextStyle, baseTooltip } from "../../lib/echartsTheme";
 
 /** Porta de charts.py::render_yoy_comparison (barras agrupadas). Roubo usa "decal" (hachura) em vez de cor para diferenciar em P&B. */
 export default function YoyChart({ data }) {
@@ -10,7 +10,7 @@ export default function YoyChart({ data }) {
   const option = {
     textStyle: baseTextStyle,
     tooltip: { ...baseTooltip, trigger: "axis", axisPointer: { type: "shadow" } },
-    legend: { top: 0, right: 0, textStyle: { color: "#1a1a1a", fontSize: 11 } },
+    legend: baseLegend,
     grid: baseGrid,
     xAxis: { type: "category", data: years, ...baseAxis },
     yAxis: { type: "value", ...baseAxis },
